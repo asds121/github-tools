@@ -7,49 +7,80 @@ import sys
 import time
 import threading
 from queue import Queue
+import socket
+import ssl
 import urllib.request
 
 TARGETS = [
-    ("homepage", "https://github.com"),
-    ("api", "https://api.github.com"),
+    ("homepage", "github.com", 443),
+    ("api", "api.github.com", 443),
 ]
 DEFAULT_TIMEOUT = 8.0
 THRESHOLD_MS = 3000
 
 
-def test_url(url, timeout):
+def test_connection(host, port, timeout):
+    """Test connection using socket with real timeout control"""
+    start = time.time()
     try:
-        start = time.time()
-        req = urllib.request.Request(url, headers={"User-Agent": "GitHubChecker/2.0"})
-        r = urllib.request.urlopen(req, timeout=timeout)
-        r.read()
-        ms = round((time.time() - start) * 1000)
-        return {"ok": r.status == 200, "ms": ms}
-    except:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(timeout)
+        s.connect((host, port))
+        
+        context = ssl.create_default_context()
+        with s, context.wrap_socket(s, server_hostname=host) as ssock:
+            request = f"GET / HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n"
+            ssock.sendall(request.encode())
+            response = ssock.recv(1024)
+            
+            ms = round((time.time() - start) * 1000)
+            return {"ok": True, "ms": ms}
+    except socket.timeout:
+        return {"ok": False, "ms": 0, "error": "timeout"}
+    except Exception as e:
+        return {"ok": False, "ms": 0, "error": str(e)}
+
+
+def test_url(url, timeout):
+    """Backward compatibility interface"""
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        return test_connection(parsed.netloc, parsed.port or 443, timeout)
+    except Exception:
         return {"ok": False, "ms": 0}
 
 
-def progress_bar(stop_event, queue):
+def progress_bar(stop_event, queue, output_func=None):
     duration = DEFAULT_TIMEOUT
     start_time = time.time()
     chars = "|/-\\"
     i = 0
+    last_line = ""
     while not stop_event.is_set():
         elapsed = time.time() - start_time
         percent = min(elapsed / duration * 100, 100)
         char = chars[i % len(chars)]
-        sys.stdout.write(f"\r[{char}] Working... {percent:3.0f}%")
-        sys.stdout.flush()
+        line = f"  [{char}] Working... {percent:3.0f}%"
+        if output_func is None:
+            sys.stdout.write(f"\r{line}")
+            sys.stdout.flush()
+            last_line = line
+        else:
+            output_func(line)
         i += 1
         time.sleep(0.1)
+    if output_func is None:
+        sys.stdout.write(" " * len(last_line) + "\r")
+        sys.stdout.flush()
     queue.put(time.time() - start_time)
 
 
-def run_with_progress(check_func):
+def run_with_progress(check_func, output_func=None):
     stop_event = threading.Event()
     queue = Queue()
 
-    t = threading.Thread(target=progress_bar, args=(stop_event, queue))
+    t = threading.Thread(target=progress_bar, args=(stop_event, queue, output_func))
     t.start()
 
     result = check_func()
@@ -62,12 +93,13 @@ def run_with_progress(check_func):
 
 def check_single():
     results = []
-    for name, url in TARGETS:
-        results.append((name, test_url(url, DEFAULT_TIMEOUT)))
-        if name == "homepage" and not results[-1][1]["ok"]:
+    for name, host, port in TARGETS:
+        result = test_connection(host, port, DEFAULT_TIMEOUT)
+        results.append((name, result))
+        if name == "homepage" and not result["ok"]:
             break
 
-    avg_ms = sum(r[1]["ms"] for r in results) / len(results)
+    avg_ms = sum(r[1]["ms"] for r in results if r[1]["ok"]) / len([r for r in results if r[1]["ok"]]) if [r for r in results if r[1]["ok"]] else 0
 
     if all(r[1]["ok"] for r in results):
         status = "good" if avg_ms < THRESHOLD_MS else "warn"
@@ -77,8 +109,8 @@ def check_single():
     return {"status": status, "ms": avg_ms, "results": results}
 
 
-def check(timeout=DEFAULT_TIMEOUT):
-    return run_with_progress(check_single)
+def check(timeout=DEFAULT_TIMEOUT, output_func=None):
+    return run_with_progress(check_single, output_func)
 
 
 def main():

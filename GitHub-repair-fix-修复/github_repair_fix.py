@@ -28,7 +28,7 @@ def backup_hosts():
             with open(HOSTS_PATH + ".bak", "wb") as fw:
                 fw.write(f.read())
         return True
-    except:
+    except Exception:
         return False
 
 def update_hosts(github_ips=None, backup=None):
@@ -45,7 +45,7 @@ def update_hosts(github_ips=None, backup=None):
     try:
         with open(HOSTS_PATH, "rb") as f:
             content = f.read().decode("gbk", errors="ignore")
-        lines = [l for l in content.split("\n") if "github" not in l.lower() or "#" in l]
+        lines = [line for line in content.split("\n") if "github" not in line.lower() or "#" in line]
         lines.extend([f"{v}    {k}" for k, v in github_ips.items()])
         with open(HOSTS_PATH, "wb") as f:
             f.write("\n".join(lines).encode("gbk"))

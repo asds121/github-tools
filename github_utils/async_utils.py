@@ -44,7 +44,7 @@ class AsyncTaskRunner:
         self.result_callback = result_callback
 
     def run_tool_async(self, tool_key, tool_config, run_tool_func, btn,
-                       on_complete=None):
+                       on_complete=None, output_func=None):
         if self.running_tasks.get(tool_key, False):
             return
 
@@ -53,7 +53,7 @@ class AsyncTaskRunner:
 
         def task():
             try:
-                result = run_tool_func(tool_config)
+                result = run_tool_func(tool_config, output_func)
                 self.result_queue.put((tool_key, "success", result))
             except Exception as e:
                 self.result_queue.put((tool_key, "error", str(e)))
@@ -97,6 +97,8 @@ class ResultPanel:
         self.text.config(yscrollcommand=self.scrollbar.set)
         self.text.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
+        self.progress_line_num = None
+        self._active_progress = False
 
     def insert(self, content, tag=None):
         self.text.insert("end", content + "\n", tag)
@@ -104,9 +106,87 @@ class ResultPanel:
 
     def clear(self):
         self.text.delete("1.0", "end")
+        self.progress_line_num = None
+        self._active_progress = False
 
     def show_json(self, data):
         import json
         content = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
         self.text.insert("end", content)
         self.text.see("end")
+
+    def create_progress_output_func(self):
+        """创建进度条输出函数，适用于UI显示"""
+        if self._active_progress:
+            return None
+        
+        self._active_progress = True
+        
+        def output_func(line):
+            line = line.strip()
+            if not line:
+                return
+            
+            current_line_count = int(self.text.index("end-1c").split('.')[0])
+            
+            if self.progress_line_num is None or self.progress_line_num > current_line_count:
+                self.text.insert("end", line + "\n")
+                self.progress_line_num = current_line_count
+            else:
+                start_idx = f"{self.progress_line_num}.0"
+                end_idx = f"{self.progress_line_num + 1}.0"
+                try:
+                    self.text.delete(start_idx, end_idx)
+                except Exception:
+                    pass
+                self.text.insert(start_idx, line + "\n")
+            self.text.see("end")
+        return output_func
+
+    def clear_progress(self):
+        """清除进度条状态并清理相关文本"""
+        if self.progress_line_num is not None:
+            try:
+                line_count = int(self.text.index("end-1c").split('.')[0])
+                if self.progress_line_num <= line_count:
+                    start_idx = f"{self.progress_line_num}.0"
+                    end_idx = f"{self.progress_line_num + 1}.0"
+                    self.text.delete(start_idx, end_idx)
+                else:
+                    self._find_and_clear_progress()
+            except Exception:
+                self._find_and_clear_progress()
+        self.progress_line_num = None
+        self._active_progress = False
+
+    def _find_and_clear_progress(self):
+        """查找并清理包含进度条内容的行"""
+        try:
+            content = self.text.get("1.0", "end")
+            lines = content.split('\n')
+            for i, line in enumerate(lines):
+                if 'Working...' in line or '[|]' in line or '[/]' in line or '[-]' in line or '[\\]' in line:
+                    start_idx = f"{i + 1}.0"
+                    end_idx = f"{i + 2}.0"
+                    self.text.delete(start_idx, end_idx)
+                    break
+        except Exception:
+            pass
+
+    def clear_all_progress(self):
+        """清理所有可能存在的进度条行（用于强制清理）"""
+        content = self.text.get("1.0", "end")
+        lines = content.split('\n')
+        progress_patterns = ['Working...', '[|]', '[/]', '[-]', '[\\]']
+        
+        for i, line in enumerate(lines):
+            if any(p in line for p in progress_patterns):
+                try:
+                    start_idx = f"{i + 1}.0"
+                    end_idx = f"{i + 2}.0"
+                    self.text.delete(start_idx, end_idx)
+                except Exception:
+                    pass
+        
+        self.progress_line_num = None
+        self._active_progress = False

@@ -63,6 +63,7 @@ def main():
                   anchor="w")
 
     def handle_result(tool_key, status, data):
+        result_panel.clear_progress()
         if status == "success":
             result_text.insert("end", json.dumps(data, ensure_ascii=False,
                                                  indent=2) + "\n")
@@ -74,10 +75,16 @@ def main():
 
     def run_tool_async(tool_key, btn):
         tool_config = get_tool_config(tool_key)
+        result_panel.clear_progress()
         result_text.insert("end", f"\n{'=' * 40}\n")
         result_text.insert("end", f"正在执行: {tool_config['name']}...\n")
         result_text.see("end")
-        task_runner.run_tool_async(tool_key, tool_config, run_tool, btn)
+        output_func = result_panel.create_progress_output_func()
+        if output_func is not None:
+            task_runner.run_tool_async(tool_key, tool_config, run_tool, btn,
+                                       output_func=output_func)
+        else:
+            task_runner.run_tool_async(tool_key, tool_config, run_tool, btn)
         root.after(100, check_queue)
 
     def check_queue():

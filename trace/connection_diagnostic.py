@@ -191,6 +191,25 @@ def run():
     print("GitHub 连接诊断")
     print("=" * 60)
 
+    print("\n[0/6] 快速连通性检查")
+    print("-" * 40)
+
+    quick_check = check_github()
+    if quick_check["status"] != "bad":
+        avg_ms = quick_check.get("ms", 0)
+        print(f"  ✓ GitHub 连接正常 ({avg_ms:.0f}ms)")
+        print("\n" + "=" * 60)
+        print("诊断完成 - 无需深入诊断")
+        print("=" * 60)
+        return {
+            "status": "正常",
+            "suggestion": "GitHub 可正常访问",
+            "level": "success",
+            "latency": avg_ms
+        }
+
+    print("  ✗ 连通性异常，开始详细诊断...")
+
     local_results = check_local_network()
     dns_ok, ips = check_dns_resolution()
     tcp_results = check_tcp_connection(ips)

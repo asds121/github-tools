@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """GitHub Hosts查看器 - 查看当前hosts配置"""
 import os
-from pathlib import Path
 
-HOSTS_PATH = os.path.join(os.environ.get("SystemRoot", "C:\\Windows"), "System32", "drivers", "etc", "hosts")
+HOSTS_PATH = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "drivers", "etc", "hosts")
 
 def get_hosts_content():
     """获取hosts文件内容（忽略注释）"""

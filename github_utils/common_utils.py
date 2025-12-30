@@ -3,6 +3,7 @@
 import sys
 import json
 import importlib.util
+import inspect
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -73,13 +74,26 @@ def load_module(module_name, module_path=None):
     return module
 
 
-def run_tool(tool_config):
-    """运行工具"""
+def run_tool(tool_config, output_func=None):
+    """运行工具
+    
+    Args:
+        tool_config: 工具配置
+        output_func: 输出函数（可选，用于UI进度显示）
+    """
     module_path = ROOT_DIR / tool_config["module"]
     module = load_module(str(module_path))
     func = getattr(module, tool_config["function"])
-    if "params" in tool_config:
-        return func(**tool_config["params"])
+    
+    func_params = tool_config.get("params", {}).copy()
+    
+    if output_func is not None:
+        sig = inspect.signature(func)
+        if 'output_func' in sig.parameters:
+            func_params["output_func"] = output_func
+    
+    if func_params:
+        return func(**func_params)
     return func()
 
 

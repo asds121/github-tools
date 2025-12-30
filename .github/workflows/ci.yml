@@ -1,0 +1,141 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: '0 0 * * 0'  # 每周日运行一次
+
+jobs:
+  lint:
+    name: 代码风格检查
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: 设置 Python 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+        cache: 'pip'
+    
+    - name: 安装依赖
+      run: pip install flake8
+    
+    - name: 运行 flake8 检查
+      run: python -m flake8 . --exclude=github-checker-检测状态,trace,__pycache__,.git
+    
+  test:
+    name: 功能测试
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: 设置 Python 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+        cache: 'pip'
+    
+    - name: 运行基础测试
+      run: |
+        # 测试模块导入
+        python -c "from github_utils.common_utils import load_module, run_tool"
+        python -c "from github_utils.async_utils import AsyncTaskRunner, ResultPanel, Tooltip"
+        echo "模块导入测试通过"
+        
+        # 测试配置加载
+        python -c "from github_utils.common_utils import load_sub_config; config = load_sub_config('GitHub-guardian-守护进程'); print(f'守护进程配置加载成功: {config}')"
+        echo "配置加载测试通过"
+    
+  build:
+    name: 构建检查
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: 设置 Python 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+    
+    - name: 检查文件结构完整性
+      run: |
+        # 检查关键文件是否存在
+        if [ -f "main_gui.py" ]; then echo "main_gui.py 存在"; else exit 1; fi
+        if [ -f "config.json" ]; then echo "config.json 存在"; else exit 1; fi
+        if [ -d "github_utils" ]; then echo "github_utils 目录存在"; else exit 1; fi
+        if [ -d "trace" ]; then echo "trace 目录存在"; else exit 1; fi
+        echo "文件结构完整性检查通过"
+    
+  security:
+    name: 安全扫描
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: 设置 Python 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+    
+    - name: 安装安全扫描工具
+      run: pip install bandit
+    
+    - name: 运行安全扫描
+      run: bandit -r . --exclude=github-checker-检测状态,trace,__pycache__,.git -ll
+    
+  matrix-test:
+    name: 多版本 Python 测试
+    runs-on: ubuntu-latest
+    needs: security
+    strategy:
+      matrix:
+        python-version: [ '3.8', '3.9', '3.10', '3.11' ]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: 设置 Python ${{ matrix.python-version }} 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: 测试模块兼容性
+      run: |
+        python -c "from github_utils.common_utils import load_module, run_tool"
+        python -c "from github_utils.async_utils import AsyncTaskRunner"
+        echo "Python ${{ matrix.python-version }} 兼容性测试通过"
+
+  summary:
+    name: CI 结果汇总
+    runs-on: ubuntu-latest
+    needs: [lint, test, build, security, matrix-test]
+    if: always()
+    
+    steps:
+    - name: 获取工作流状态
+      run: |
+        echo "所有 CI 任务已完成"
+        echo "- 代码风格检查: ${{ needs.lint.result }}"
+        echo "- 功能测试: ${{ needs.test.result }}"
+        echo "- 构建检查: ${{ needs.build.result }}"
+        echo "- 安全扫描: ${{ needs.security.result }}"
+        echo "- 多版本 Python 测试: ${{ needs.matrix-test.result }}"
+        
+        if [ ${{ needs.lint.result }} = 'success' ] && [ ${{ needs.test.result }} = 'success' ] && [ ${{ needs.build.result }} = 'success' ] && [ ${{ needs.security.result }} = 'success' ] && [ ${{ needs.matrix-test.result }} = 'success' ]; then 
+          echo "所有 CI 任务均通过!" 
+        else 
+          echo "部分 CI 任务失败，请检查日志。" 
+          exit 1 
+        fi

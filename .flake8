@@ -1,0 +1,22 @@
+[flake8]
+max-line-length = 120
+indent-size = 4
+extend-ignore = E203, E402, E501
+
+[E721]
+do not compare types, use 'isinstance()'
+
+[F401]
+module imported but unused
+
+[F841]
+local variable is assigned but no use
+
+[import-order]
+force-alphabetical-sort-within-sections = true
+force-single-line = false
+case-insensitive = false
+
+[per-file-ignores]
+__init__.py: F401
+main_gui.py: F401, F841

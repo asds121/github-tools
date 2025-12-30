@@ -1,0 +1,11 @@
+{
+    "name": "GitHub守护进程",
+    "description": "监控并维护GitHub连接状态",
+    "ip_pool": [
+        "140.82.113.3",
+        "140.82.114.3",
+        "140.82.112.3"
+    ],
+    "check_interval": 300,
+    "timeout": 3
+}

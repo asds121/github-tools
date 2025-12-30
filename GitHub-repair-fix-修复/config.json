@@ -1,0 +1,9 @@
+{
+    "name": "GitHub Hosts修复",
+    "description": "修复hosts文件以改善GitHub访问",
+    "github_ips": {
+        "github.com": "140.82.113.3",
+        "api.github.com": "140.82.114.6"
+    },
+    "backup": true
+}

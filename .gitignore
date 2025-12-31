@@ -53,3 +53,6 @@ htmlcov/
 *.tmp
 *.bak
 temp/
+
+# Project text files
+*.txt

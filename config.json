@@ -1,0 +1,194 @@
+{
+  "tools": [
+    {
+      "key": "checker",
+      "name": "连通性检测",
+      "description": "检测GitHub服务连接状态",
+      "module": "github-checker-检测状态/github_checker.py",
+      "function": "check"
+    },
+    {
+      "key": "dns",
+      "name": "DNS查询",
+      "description": "从DNS服务器获取GitHub的IP地址",
+      "module": "GitHub-searcher-dns-DNS/github_dns.py",
+      "function": "resolve_all"
+    },
+    {
+      "key": "tester",
+      "name": "IP测速",
+      "description": "测试GitHub IP的连接速度",
+      "module": "GitHub-searcher-test-测速/github_ip_tester.py",
+      "function": "test_all"
+    },
+    {
+      "key": "repair",
+      "name": "Hosts修复",
+      "description": "自动修复hosts文件",
+      "module": "GitHub-repair-fix-修复/github_repair_fix.py",
+      "function": "update_hosts",
+      "params": {
+        "github_ips": {
+          "github.com": "140.82.113.3",
+          "api.github.com": "140.82.114.6"
+        }
+      }
+    },
+    {
+      "key": "viewer",
+      "name": "Hosts查看",
+      "description": "查看当前hosts文件配置（忽略注释）",
+      "module": "GitHub-hosts-viewer-查看/github_hosts_viewer.py",
+      "function": "main"
+    },
+    {
+      "key": "guardian",
+      "name": "守护进程",
+      "description": "监控并维护GitHub连接状态",
+      "module": "GitHub-guardian-守护进程/github_guardian_ascii.py",
+      "function": "check_and_repair"
+    },
+    {
+      "key": "auto_diagnose",
+      "name": "一键检测修复",
+      "description": "自动检测GitHub连接状态，若异常则自动进行DNS解析、IP测速、hosts修复并验证结果",
+      "module": "trace/auto_diagnose.py",
+      "function": "run"
+    },
+    {
+      "key": "quick_speed_test",
+      "name": "一键测速",
+      "description": "快速测试当前网络到GitHub的连接速度，显示最优IP和延迟统计",
+      "module": "trace/quick_speed_test.py",
+      "function": "run"
+    },
+    {
+      "key": "hosts_manager",
+      "name": "Hosts管理器",
+      "description": "查看当前hosts文件的GitHub配置，支持备份、恢复和修改hosts记录",
+      "module": "trace/hosts_manager.py",
+      "function": "get_status"
+    },
+    {
+      "key": "connection_diagnostic",
+      "name": "连接诊断",
+      "description": "逐步诊断网络连接：本地网络→DNS解析→TCP连接→HTTP响应，综合评估连接状态",
+      "module": "trace/connection_diagnostic.py",
+      "function": "run"
+    },
+    {
+      "key": "ip_blacklist",
+      "name": "IP黑名单",
+      "description": "管理测速过程中发现的异常IP（超时/高延迟/不稳定），自动将问题IP加入黑名单",
+      "module": "trace/ip_blacklist.py",
+      "function": "get_blacklist"
+    }
+  ],
+  "subprojects": {
+    "GitHub-guardian-守护进程": {
+      "name": "GitHub守护进程",
+      "description": "监控并维护GitHub连接状态",
+      "ip_pool": [
+        "140.82.113.3",
+        "140.82.114.3",
+        "140.82.112.3"
+      ],
+      "check_interval": 300,
+      "timeout": 3
+    },
+    "GitHub-repair-fix-修复": {
+      "name": "GitHub Hosts修复",
+      "description": "修复hosts文件以改善GitHub访问",
+      "github_ips": {
+        "github.com": "140.82.113.3",
+        "api.github.com": "140.82.114.3"
+      },
+      "backup": true
+    },
+    "GitHub-searcher-dns-DNS": {
+      "name": "GitHub DNS查询",
+      "description": "从DNS服务器获取GitHub的IP地址",
+      "dns_servers": [
+        "223.5.5.5",
+        "8.8.8.8"
+      ],
+      "domain": "github.com",
+      "timeout": 5
+    },
+    "GitHub-searcher-test-测速": {
+      "name": "GitHub IP测速",
+      "description": "测试GitHub IP的连接速度",
+      "ips": [
+        "140.82.113.3",
+        "140.82.114.3",
+        "140.82.112.3",
+        "140.82.114.4",
+        "140.82.113.4",
+        "20.205.243.166",
+        "20.205.243.165"
+      ],
+      "port": 443,
+      "timeout": 3,
+      "max_workers": 10
+    }
+  },
+  "ui": {
+    "window": {
+      "title": "GitHub工具合集 - 主界面",
+      "size": "500x650"
+    },
+    "style": {
+      "title_font": [
+        "Arial",
+        14,
+        "bold"
+      ],
+      "label_font": [
+        "Arial",
+        12,
+        "bold"
+      ]
+    },
+    "tabs": {
+      "tools_text": "工具",
+      "info_text": "说明"
+    },
+    "layout": {
+      "buttons_per_row": 3,
+      "exit_button_column": 3,
+      "tool_button_width": 10,
+      "exit_button_width": 8,
+      "button_padding_x": 5,
+      "button_padding_y": 5,
+      "result_text_height": 18,
+      "frame_padding": 5
+    },
+    "padding": {
+      "root_padx": 10,
+      "root_pady_top": 5,
+      "root_pady_bottom": 10,
+      "tab_padding": 10,
+      "title_pady_top": 10,
+      "title_pady_bottom": 5,
+      "info_title_pady_bottom": 10
+    },
+    "text": {
+      "result_frame_title": "执行结果",
+      "info_frame_title": "使用说明",
+      "main_title": "GitHub工具合集",
+      "info_content": "各工具功能说明：\n  • 连通性检测：检测GitHub服务连接状态\n  • DNS查询：从DNS服务器获取GitHub的IP地址\n  • IP测速：测试GitHub IP的连接速度\n  • Hosts修复：自动修复hosts文件\n  • Hosts查看：查看当前hosts配置\n  • 守护进程：监控并维护GitHub连接状态\n  • 代码检测：检测项目代码风格和规范\n  • 一键检测修复：自动检测并修复GitHub连接\n  • 一键测速：快速测试所有可用GitHub IP\n  • Hosts管理器：管理hosts文件的GitHub配置\n  • 连接诊断：逐步诊断网络连接问题\n  • IP黑名单：管理异常IP列表\n\n推荐流程：\n  连接诊断 → 一键检测修复 或 一键测速 → Hosts管理器"
+    },
+    "colors": {
+      "info_text_foreground": "gray"
+    },
+    "tooltip": {
+      "background": "#ffffcc",
+      "relief": "solid",
+      "borderwidth": 1,
+      "padding_x": 8,
+      "padding_y": 5,
+      "offset_x": 25,
+      "offset_y": 25
+    }
+  }
+}

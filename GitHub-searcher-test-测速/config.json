@@ -1,0 +1,12 @@
+{
+    "name": "GitHub IP测速",
+    "description": "测试GitHub IP的连接速度",
+    "ips": [
+        "140.82.113.3",
+        "140.82.114.3",
+        "140.82.112.3"
+    ],
+    "port": 443,
+    "timeout": 3,
+    "max_workers": 10
+}

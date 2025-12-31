@@ -7,32 +7,52 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from github_utils import load_module
+import importlib.util
+from pathlib import Path
+
+def load_module(module_path):
+    """动态加载模块"""
+    path = Path(module_path)
+    spec = importlib.util.spec_from_file_location("tool_module", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 IP_QUALITY_DB = ROOT_DIR / "trace" / "ip_quality_db.json"
 
+# 导入备用方案函数
+import sys
+from pathlib import Path
+
+# 添加service层到Python路径
+service_path = Path(__file__).resolve().parent.parent / "service"
+sys.path.insert(0, str(service_path))
+
+# 从service层导入备用方案函数
+from auto_diagnose_fallbacks import (
+    get_known_good_ips, fallback_dns_lookup, fallback_known_ips,
+    fallback_ip_quality_db, fallback_quick_test, fallback_manual_config,
+    test_single_ip
+)
+
 checker_module = load_module(
-    "checker",
     ROOT_DIR / "github-checker-检测状态" / "github_checker.py"
 )
 check_github = checker_module.check
 
 dns_module = load_module(
-    "dns",
     ROOT_DIR / "GitHub-searcher-dns-DNS" / "github_dns.py"
 )
 get_dns_ips = dns_module.resolve_all
 
 tester_module = load_module(
-    "tester",
     ROOT_DIR / "GitHub-searcher-test-测速" / "github_ip_tester.py"
 )
 test_ips = tester_module.test_all
 
 repair_module = load_module(
-    "repair",
     ROOT_DIR / "GitHub-repair-fix-修复" / "github_repair_fix.py"
 )
 update_hosts = repair_module.update_hosts
@@ -65,116 +85,10 @@ def save_ip_quality(ip, latency, success):
         pass
 
 
-def get_known_good_ips():
-    """获取已知的可用IP列表（配置中的备用IP）"""
-    return [
-        "140.82.113.3",
-        "140.82.114.3",
-        "140.82.112.3",
-        "140.82.114.4",
-        "140.82.113.4",
-        "20.205.243.166",
-        "20.205.243.165",
-        "20.199.111.5",
-        "20.27.177.113",
-    ]
-
-
 def print_step(step_num, message):
-    print(f"\n{'=' * 50}")
+    print(f"\n{'='*50}")
     print(f"[{step_num}/6] {message}")
-    print('=' * 50)
-
-
-def fallback_dns_lookup():
-    """备用方案1: 尝试更多DNS服务器"""
-    print("\n【备用方案1】尝试更多DNS服务器...")
-    try:
-        import socket
-        dns_servers = ["8.8.8.8", "8.8.4.4", "1.1.1.1", "9.9.9.9", "208.67.222.222"]
-        ips = []
-        for server in dns_servers:
-            try:
-                result = socket.gethostbyname_ex("github.com")
-                for ip in result[2]:
-                    if ip not in ips:
-                        ips.append(ip)
-            except Exception:
-                continue
-        if ips:
-            print(f"  通过DNS解析获取到 {len(ips)} 个IP")
-            return ips
-    except Exception as e:
-        print(f"  DNS解析失败: {e}")
-    return []
-
-
-def fallback_known_ips():
-    """备用方案2: 使用已知的可用IP"""
-    print("\n【备用方案2】使用已知可用IP...")
-    known_ips = get_known_good_ips()
-    print(f"  尝试 {len(known_ips)} 个已知可用IP...")
-    return known_ips
-
-
-def fallback_ip_quality_db():
-    """备用方案3: 使用IP质量数据库中的成功IP"""
-    print("\n【备用方案3】从IP质量库选择...")
-    db = load_ip_quality_db()
-    if not db:
-        print("  IP质量库为空")
-        return []
-    
-    candidates = []
-    for ip, data in db.items():
-        if data.get("success_count", 0) > 0 and data.get("count", 0) >= 2:
-            avg_latency = data["total_latency"] / data["count"]
-            candidates.append((ip, avg_latency, data["success_count"] / data["count"]))
-    
-    candidates.sort(key=lambda x: (x[2], x[1]))
-    if candidates:
-        print(f"  从质量库选择了 {min(5, len(candidates))} 个高分IP")
-        return [c[0] for c in candidates[:5]]
-    return []
-
-
-def fallback_quick_test(ips):
-    """备用方案4: 快速测试IP"""
-    print("\n【备用方案4】快速测试...")
-    results = []
-    for ip in ips[:10]:
-        if test_single_ip(ip):
-            results.append(ip)
-    if results:
-        print(f"  快速测试找到 {len(results)} 个可用IP")
-        return results
-    return []
-
-
-def test_single_ip(ip, port=443, timeout=2):
-    """快速测试单个IP"""
-    try:
-        import socket
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(timeout)
-        s.connect((ip, port))
-        s.close()
-        return True
-    except Exception:
-        return False
-
-
-def fallback_manual_config():
-    """备用方案5: 提供手动配置建议"""
-    print("\n【备用方案5】手动配置建议")
-    print("  1. 检查网络连接是否正常")
-    print("  2. 尝试使用VPN或代理")
-    print("  3. 手动编辑 hosts 文件，添加:")
-    known_ips = get_known_good_ips()
-    for ip in known_ips[:3]:
-        print(f"     {ip}    github.com")
-    print("  4. 运行: ipconfig /flushdns 刷新DNS")
-    return {"manual": True}
+    print('='*50)
 
 
 def try_hosts_repair_with_fallback(github_ips):
@@ -188,7 +102,6 @@ def try_hosts_repair_with_fallback(github_ips):
     
     print(f"  hosts写入失败: {result.get('error', '未知错误')}")
     return result
-
 
 def run():
     print("=" * 60)

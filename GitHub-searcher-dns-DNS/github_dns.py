@@ -2,17 +2,21 @@
 """GitHub DNS查询 - 从DNS服务器获取IP"""
 import subprocess
 import sys
+import json
 import re
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from github_utils import load_sub_config
-
-CONFIG = load_sub_config("GitHub-searcher-dns-DNS")
-
-DNS_SERVERS = CONFIG["dns_servers"]
-DOMAIN = CONFIG["domain"]
+# 直接读取本地配置文件
+CONFIG_PATH = Path(__file__).resolve().parent / "config.json"
+if CONFIG_PATH.exists():
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        CONFIG = json.load(f)
+    DNS_SERVERS = CONFIG["dns_servers"]
+    DOMAIN = CONFIG["domain"]
+else:
+    # 默认配置
+    DNS_SERVERS = ["114.114.114.114", "8.8.8.8", "1.1.1.1"]
+    DOMAIN = "github.com"
 
 def get_ips(domain=None, dns=None):
     """从DNS服务器获取域名的IP地址"""

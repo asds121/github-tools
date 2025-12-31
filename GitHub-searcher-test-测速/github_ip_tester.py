@@ -2,21 +2,24 @@
 """GitHub IP测速 - 测试访问GitHub首页速度"""
 import socket
 import sys
+import json
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# 直接读取本地配置文件
+CONFIG_PATH = Path(__file__).resolve().parent / "config.json"
+if CONFIG_PATH.exists():
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        CONFIG = json.load(f)
+    IPS = CONFIG["ips"]
+    TIMEOUT = CONFIG["timeout"]
+else:
+    # 默认配置
+    IPS = ["140.82.113.4", "140.82.114.4", "140.82.113.3"]
+    TIMEOUT = 3
 
-from github_utils import load_sub_config
-
-CONFIG = load_sub_config("GitHub-searcher-test-测速")
-
-IPS = CONFIG["ips"]
-TIMEOUT = CONFIG["timeout"]
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "trace"))
-from ip_quality_db import record_ip_result, filter_blacklisted_ips
-USE_SHARED_DB = True
+# 不使用共享数据库
+USE_SHARED_DB = False
 
 
 def test_homepage_speed(ip, host="github.com", port=443, timeout=None):
@@ -44,10 +47,8 @@ def test_homepage_speed(ip, host="github.com", port=443, timeout=None):
         latency = int((time.time() - start) * 1000)
         return {"ip": ip, "latency": latency, "status": "OK"}
     except socket.timeout:
-        record_ip_result(ip, None, False)
         return {"ip": ip, "latency": None, "status": "FAIL", "error": "timeout"}
     except Exception as e:
-        record_ip_result(ip, None, False)
         return {"ip": ip, "latency": None, "status": "FAIL", "error": str(e)}
 
 
@@ -55,14 +56,9 @@ def test_all(ips=None, host="github.com", port=443):
     """测试所有IP并返回排序结果"""
     ips = ips or IPS
     
-    if USE_SHARED_DB:
-        ips = filter_blacklisted_ips(ips)
-    
     results = []
     for ip in ips:
         result = test_homepage_speed(ip, host, port)
-        if result.get("latency"):
-            record_ip_result(ip, result["latency"], True)
         results.append(result)
     results.sort(key=lambda x: x["latency"] or 9999)
     return results

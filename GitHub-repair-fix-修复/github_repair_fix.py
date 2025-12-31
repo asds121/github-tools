@@ -2,17 +2,22 @@
 """GitHub Hosts修复 - 修改hosts文件"""
 import os
 import sys
+import json
 import ctypes
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+HOSTS_PATH = os.path.join(os.environ.get("SystemRoot", "C:\Windows"), "System32", "drivers", "etc", "hosts")
 
-from github_utils import load_sub_config
-
-CONFIG = load_sub_config("GitHub-repair-fix-修复")
-
-HOSTS_PATH = os.path.join(os.environ.get("SystemRoot", "C:\\Windows"), "System32", "drivers", "etc", "hosts")
-GITHUB_IPS = CONFIG["github_ips"]
+# 直接读取本地配置文件
+CONFIG_PATH = Path(__file__).resolve().parent / "config.json"
+if CONFIG_PATH.exists():
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        CONFIG = json.load(f)
+    GITHUB_IPS = CONFIG["github_ips"]
+else:
+    # 默认配置
+    CONFIG = {"backup": True}
+    GITHUB_IPS = {"github.com": "140.82.113.4", "api.github.com": "140.82.113.4"}
 
 def is_admin():
     """检查是否具有管理员权限"""

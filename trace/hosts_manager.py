@@ -172,7 +172,7 @@ def run():
     if len(backups) > 5:
         print(f"  ... 共 {len(backups)} 个备份")
 
-    print(f"\n【操作选项】")
+    print("\n【操作选项】")
     print("-" * 50)
     print("  [1] 备份当前配置")
     print("  [2] 恢复最近备份")

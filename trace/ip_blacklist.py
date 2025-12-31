@@ -80,10 +80,10 @@ def check_and_add_to_blacklist(ip, test_results, thresholds=None):
     timeout_count = test_results.get("timeout_count", 0)
     latencies = test_results.get("latencies", [])
     latency_count = len(latencies)
-    slow_count = sum(1 for l in latencies if l > thresholds["slow_latency"]) if latencies else 0
+    slow_count = sum(1 for latency in latencies if latency > thresholds["slow_latency"]) if latencies else 0
 
     if latency_count > 1:
-        variance = sum((l - sum(latencies)/len(latencies))**2 for l in latencies) / len(latencies)
+        variance = sum((latency - sum(latencies)/len(latencies))**2 for latency in latencies) / len(latencies)
     else:
         variance = 0
 
@@ -120,7 +120,6 @@ def format_blacklist():
     lines = []
     for ip, info in sorted(blacklist.items()):
         reason = info.get("reason", "未知")
-        detail = info.get("detail", "")
         added_at = info.get("added_at", "")
         reason_text = REASON_MAP.get(reason, reason)
         lines.append(f"  {ip:<20} {reason_text:<10} {added_at}")
@@ -142,14 +141,13 @@ def run():
     if blacklist:
         for ip, info in sorted(blacklist.items()):
             reason = info.get("reason", "未知")
-            detail = info.get("detail", "")
             added_at = info.get("added_at", "")
             reason_text = REASON_MAP.get(reason, reason)
             print(f"  {ip:<18} {reason_text:<8} {added_at}")
     else:
         print("  黑名单为空")
 
-    print(f"\n【操作】")
+    print("\n【操作】")
     print("-" * 50)
     print("  [1] 添加 IP 到黑名单")
     print("  [2] 从黑名单移除 IP")
@@ -157,7 +155,7 @@ def run():
     print("  [4] 导出黑名单")
     print("  [5] 刷新列表")
 
-    print(f"\n  本次测速将跳过 {count} 个 IP")
+    print(f"  本次测速将跳过 {count} 个 IP")
     print()
 
     return blacklist

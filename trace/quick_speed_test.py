@@ -1,24 +1,68 @@
 #!/usr/bin/env python3
 """一键测速 - 快速测试当前网络到 GitHub 的连接速度"""
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from github_utils import load_module, load_sub_config
+import importlib.util
+import json
+from pathlib import Path
+
+
+def load_module(module_path):
+    """动态加载模块"""
+    path = Path(module_path)
+    spec = importlib.util.spec_from_file_location("tool_module", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_sub_config(sub_dir, sub_config_name="config.json"):
+    """加载子项目配置"""
+    root_dir = Path(__file__).resolve().parent.parent
+    sub_path = root_dir / sub_dir / sub_config_name
+    
+    if sub_path.exists():
+        with open(sub_path, "r", encoding="utf-8") as f:
+            sub_config = json.load(f)
+    else:
+        sub_config = {}
+    
+    # 加载根配置进行覆盖
+    config_path = root_dir / "config.json"
+    if config_path.exists():
+        with open(config_path, "r", encoding="utf-8") as f:
+            root_config = json.load(f)
+        
+        root_override_key = f"subprojects.{sub_dir}"
+        if root_override_key in root_config:
+            root_override = root_config[root_override_key]
+            sub_config = _deep_merge(sub_config, root_override)
+    
+    return sub_config
+
+
+def _deep_merge(base, override):
+    """深度合并配置"""
+    result = base.copy()
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 dns_module = load_module(
-    "dns",
     ROOT_DIR / "GitHub-searcher-dns-DNS" / "github_dns.py"
 )
 get_dns_ips = dns_module.resolve_all
 
 tester_module = load_module(
-    "tester",
     ROOT_DIR / "GitHub-searcher-test-测速" / "github_ip_tester.py"
 )
 test_ips = tester_module.test_all

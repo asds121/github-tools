@@ -138,7 +138,7 @@ def get_statistics():
     blacklist = load_blacklist()
     
     total_ips = len(db)
-    good_count = len([ip for ip, data in db.items() 
+    good_count = len([ip for ip, data in db.items()
                       if data.get("success_count", 0) / max(data.get("count", 1), 1) >= 0.5])
     bad_count = total_ips - good_count
     

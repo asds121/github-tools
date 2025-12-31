@@ -8,25 +8,31 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from github_utils import load_module
+import importlib.util
+from pathlib import Path
+
+def load_module(module_path):
+    """动态加载模块"""
+    path = Path(module_path)
+    spec = importlib.util.spec_from_file_location("tool_module", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 
 checker_module = load_module(
-    "checker",
     ROOT_DIR / "github-checker-检测状态" / "github_checker.py"
 )
 check_github = checker_module.check
 
 dns_module = load_module(
-    "dns",
     ROOT_DIR / "GitHub-searcher-dns-DNS" / "github_dns.py"
 )
 get_dns_ips = dns_module.resolve_all
 
 tester_module = load_module(
-    "tester",
     ROOT_DIR / "GitHub-searcher-test-测速" / "github_ip_tester.py"
 )
 test_single = tester_module.test_homepage_speed
@@ -77,7 +83,7 @@ def check_dns_resolution():
     ips = get_dns_ips()
 
     if ips:
-        print(f"  ✓ DNS 解析成功")
+        print("  ✓ DNS 解析成功")
         print(f"    解析结果: {', '.join(ips[:5])}{'...' if len(ips) > 5 else ''}")
         return True, ips
     else:

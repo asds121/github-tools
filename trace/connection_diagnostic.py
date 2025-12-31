@@ -11,6 +11,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import importlib.util
 from pathlib import Path
 
+# 导入故障分析模块，用于记录故障信息
+from trace import fault_analysis
+
 def load_module(module_path):
     """动态加载模块"""
     path = Path(module_path)
@@ -207,6 +210,11 @@ def check_dns_resolution():
         return True, ips
     else:
         print("  ✗ DNS 解析失败，无法获取 IP")
+        # 记录 DNS 故障
+        fault_analysis.log_fault(
+            "dns_failure",
+            details={"reason": "无法解析 github.com", "domain": "github.com"}
+        )
         return False, []
 
 
@@ -220,6 +228,7 @@ def check_tcp_connection(ips):
         return {}
 
     results = {}
+    all_failed = True
     for ip in ips[:5]:
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -230,11 +239,27 @@ def check_tcp_connection(ips):
             sock.close()
             symbol = "✓"
             results[ip] = True
+            all_failed = False
             print(f"  {symbol} {ip}:443 - 连接成功 ({latency}ms)")
+        except socket.timeout:
+            symbol = "✗"
+            results[ip] = False
+            print(f"  {symbol} {ip}:443 - 连接失败 (连接超时)")
+        except ConnectionRefusedError:
+            symbol = "✗"
+            results[ip] = False
+            print(f"  {symbol} {ip}:443 - 连接失败 (连接被拒绝)")
         except Exception as e:
             symbol = "✗"
             results[ip] = False
             print(f"  {symbol} {ip}:443 - 连接失败 ({type(e).__name__})")
+    
+    # 如果所有TCP连接都失败，记录TCP故障
+    if all_failed:
+        fault_analysis.log_fault(
+            "tcp_failure",
+            details={"ips": ips[:5], "reason": "所有IP的TCP连接都失败", "port": 443}
+        )
 
     return results
 
@@ -249,16 +274,26 @@ def check_http_response(ips):
         return {}
 
     results = {}
+    all_failed = True
     for ip in ips[:3]:
         result = test_single(ip)
         if result.get("latency"):
             symbol = "✓"
             results[ip] = True
+            all_failed = False
             print(f"  {symbol} GET / HTTP/1.1 - 响应成功 ({result['latency']}ms)")
         else:
             symbol = "✗"
             results[ip] = False
-            print(f"  {symbol} GET / HTTP/1.1 - 无响应")
+            error = result.get("error", "未知错误")
+            print(f"  {symbol} GET / HTTP/1.1 - 无响应 ({error})")
+    
+    # 如果所有HTTP响应都失败，记录HTTP故障
+    if all_failed:
+        fault_analysis.log_fault(
+            "http_failure",
+            details={"ips": ips[:3], "reason": "所有IP的HTTP响应都失败"}
+        )
 
     return results
 

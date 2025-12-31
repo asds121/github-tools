@@ -10,11 +10,8 @@ from collections import defaultdict
 import sys
 from pathlib import Path
 
-# 添加service层到Python路径
-service_path = Path(__file__).resolve().parent.parent / "service"
-sys.path.insert(0, str(service_path))
-
-from data_statistics_utils import (
+# 从trace层内部导入辅助模块
+from .data_statistics_utils import (
     load_inspection_history,
     load_ip_quality_db,
     save_inspection_history,
@@ -22,7 +19,7 @@ from data_statistics_utils import (
     get_records_by_date_range,
     group_records_by_period
 )
-from data_statistics_analysis import (
+from .data_statistics_analysis import (
     calculate_daily_stats,
     calculate_trend_stats,
     calculate_hourly_stats,
@@ -30,7 +27,7 @@ from data_statistics_analysis import (
     analyze_latency_distribution,
     get_top_abnormal_ips
 )
-from data_statistics_specific import (
+from .data_statistics_specific import (
     get_today_stats as get_today_stats_impl,
     get_weekly_stats as get_weekly_stats_impl,
     get_monthly_stats as get_monthly_stats_impl,

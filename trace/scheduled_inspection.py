@@ -11,12 +11,8 @@ from datetime import datetime, timedelta
 import sys
 from pathlib import Path
 
-# 添加service层到Python路径
-service_path = Path(__file__).resolve().parent.parent / "service"
-sys.path.insert(0, str(service_path))
-
-# 从service层导入辅助模块
-from scheduled_inspection_utils import load_config, save_config, load_history, save_history
+# 从通用工具包导入辅助模块
+from github_utils import load_config, save_config, load_history, save_history
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 

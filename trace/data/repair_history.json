@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2025-12-31T16:53:04.586411",
+    "scheme": "hosts_update",
+    "scheme_name": "更新Hosts文件",
+    "success": true,
+    "fault_type": "dns_failure",
+    "details": {
+      "test": "修复测试"
+    }
+  }
+]

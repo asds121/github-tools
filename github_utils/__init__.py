@@ -9,6 +9,11 @@ from .gui_utils import (
     create_main_window, setup_window_style, create_notebook,
     create_tab, create_button_panel, create_exit_button, ToolButton
 )
+from .scheduled_inspection_utils import (
+    load_config, save_config, load_history,
+    save_history, prune_history, generate_alert,
+    check_ip_blacklist, update_ip_blacklist
+)
 
 __all__ = [
     'load_module', 'run_tool', 'get_tool_config',
@@ -16,5 +21,8 @@ __all__ = [
     'Tooltip', 'AsyncTaskRunner', 'ResultPanel',
     'create_main_window', 'setup_window_style',
     'create_notebook', 'create_tab',
-    'create_button_panel', 'create_exit_button', 'ToolButton'
+    'create_button_panel', 'create_exit_button', 'ToolButton',
+    'load_config', 'save_config', 'load_history',
+    'save_history', 'prune_history', 'generate_alert',
+    'check_ip_blacklist', 'update_ip_blacklist'
 ]

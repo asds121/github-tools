@@ -6,6 +6,10 @@ import json
 import ctypes
 from pathlib import Path
 
+# 导入故障分析模块，用于记录修复信息
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from trace import fault_analysis
+
 HOSTS_PATH = os.path.join(os.environ.get("SystemRoot", "C:\Windows"), "System32", "drivers", "etc", "hosts")
 
 # 直接读取本地配置文件
@@ -73,7 +77,8 @@ def update_hosts(github_ips=None, backup=None):
             lines.append(line.strip())
         
         # 添加新的github条目，确保格式统一
-        lines.extend([f"{v}    {k}" for k, v in github_ips.items()])
+        new_entries = [f"{v}    {k}" for k, v in github_ips.items()]
+        lines.extend(new_entries)
         
         # 写入文件，使用原编码或UTF-8
         with open(HOSTS_PATH, "wb") as f:
@@ -81,8 +86,30 @@ def update_hosts(github_ips=None, backup=None):
         
         # 刷新DNS缓存
         os.system("ipconfig /flushdns")
+        
+        # 记录成功的修复操作
+        fault_analysis.log_repair(
+            scheme="hosts_update",
+            success=True,
+            details={
+                "github_ips": github_ips,
+                "entries_added": len(new_entries),
+                "method": "hosts_file_update"
+            }
+        )
+        
         return {"success": True, "message": "Hosts文件更新成功"}
     except Exception as e:
+        # 记录失败的修复操作
+        fault_analysis.log_repair(
+            scheme="hosts_update",
+            success=False,
+            details={
+                "error": str(e),
+                "github_ips": github_ips,
+                "reason": "可能需要管理员权限或文件被占用"
+            }
+        )
         return {"success": False, "error": str(e), "details": "可能需要管理员权限或文件被占用"}
 
 def main():

@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2025-12-31T16:53:04.582561",
+    "fault_type": "dns_failure",
+    "fault_name": "DNS解析失败",
+    "details": {
+      "reason": "测试故障",
+      "domain": "github.com"
+    },
+    "latency": null
+  }
+]

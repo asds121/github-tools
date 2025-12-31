@@ -4,9 +4,6 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-# 引入trace层模块，符合service层必须引用trace层内容的要求
-from trace import data_statistics
-
 
 def load_inspection_history(file_path):
     """加载巡检历史数据"""

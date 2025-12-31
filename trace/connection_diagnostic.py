@@ -57,8 +57,17 @@ def check_local_network():
     print("\n[1/5] 本地网络检查")
     print("-" * 40)
 
+    # 常见网关地址列表，提高检测准确性
+    common_gateways = ["192.168.1.1", "192.168.0.1", "10.0.0.1", "192.168.2.1", "192.168.10.1"]
+    gateway = None
+    for g in common_gateways:
+        if ping_host(g):
+            gateway = g
+            break
+    gateway = gateway or common_gateways[0]  # 默认使用192.168.1.1
+
     checks = {
-        "网关": "192.168.1.1",
+        "网关": gateway,
         "DNS": "114.114.114.114",
         "互联网": "8.8.8.8"
     }

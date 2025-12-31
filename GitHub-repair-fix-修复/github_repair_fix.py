@@ -48,16 +48,42 @@ def update_hosts(github_ips=None, backup=None):
         backup_hosts()
 
     try:
+        # 支持多种编码格式读取hosts文件
         with open(HOSTS_PATH, "rb") as f:
-            content = f.read().decode("gbk", errors="ignore")
-        lines = [line for line in content.split("\n") if "github" not in line.lower() or "#" in line]
+            raw_content = f.read()
+        
+        # 尝试多种编码，提高兼容性
+        content = None
+        for encoding in ["utf-8", "gbk", "utf-16"]:
+            try:
+                content = raw_content.decode(encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+        
+        if content is None:
+            content = raw_content.decode("gbk", errors="ignore")
+        
+        # 移除所有github相关的非注释行
+        lines = []
+        for line in content.split("\n"):
+            line_lower = line.lower()
+            if "github" in line_lower and "#" not in line:
+                continue
+            lines.append(line.strip())
+        
+        # 添加新的github条目，确保格式统一
         lines.extend([f"{v}    {k}" for k, v in github_ips.items()])
+        
+        # 写入文件，使用原编码或UTF-8
         with open(HOSTS_PATH, "wb") as f:
-            f.write("\n".join(lines).encode("gbk"))
+            f.write("\n".join(lines).encode("utf-8"))
+        
+        # 刷新DNS缓存
         os.system("ipconfig /flushdns")
-        return {"success": True}
+        return {"success": True, "message": "Hosts文件更新成功"}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": str(e), "details": "可能需要管理员权限或文件被占用"}
 
 def main():
     result = update_hosts()

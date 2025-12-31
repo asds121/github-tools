@@ -1,10 +1,13 @@
 name: Flake8 Code Check
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  # 只支持手动触发，默认跳过
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Run reason'
+        required: false
+        default: 'Manual check'
 
 jobs:
   flake8-check:

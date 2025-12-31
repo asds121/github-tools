@@ -56,3 +56,7 @@ temp/
 
 # Project text files
 *.txt
+design.txt
+result.txt
+rule2.txt
+rule_next.txt

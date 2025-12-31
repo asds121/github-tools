@@ -22,20 +22,25 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 
 IP_QUALITY_DB = ROOT_DIR / "trace" / "ip_quality_db.json"
 
-# 导入备用方案函数
+# 从trace层导入备用方案函数
+# 使用绝对导入，避免直接运行时的相对导入错误
 import sys
 from pathlib import Path
 
-# 添加service层到Python路径
-service_path = Path(__file__).resolve().parent.parent / "service"
-sys.path.insert(0, str(service_path))
+# 添加项目根目录到Python路径
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-# 从service层导入备用方案函数
-from auto_diagnose_fallbacks import (
-    get_known_good_ips, fallback_dns_lookup, fallback_known_ips,
-    fallback_ip_quality_db, fallback_quick_test, fallback_manual_config,
-    test_single_ip
-)
+# 导入connection_diagnostic模块
+import trace.connection_diagnostic as connection_diagnostic
+
+# 从connection_diagnostic导入所需函数
+get_known_good_ips = connection_diagnostic.get_known_good_ips
+fallback_dns_lookup = connection_diagnostic.fallback_dns_lookup
+fallback_known_ips = connection_diagnostic.fallback_known_ips
+fallback_ip_quality_db = connection_diagnostic.fallback_ip_quality_db
+fallback_quick_test = connection_diagnostic.fallback_quick_test
+fallback_manual_config = connection_diagnostic.fallback_manual_config
+test_single_ip = connection_diagnostic.test_single_ip
 
 checker_module = load_module(
     ROOT_DIR / "github-checker-检测状态" / "github_checker.py"

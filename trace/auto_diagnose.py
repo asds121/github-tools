@@ -3,20 +3,14 @@
 import sys
 import time
 import json
+import os
 from pathlib import Path
 
+# Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import importlib.util
-from pathlib import Path
-
-def load_module(module_path):
-    """动态加载模块"""
-    path = Path(module_path)
-    spec = importlib.util.spec_from_file_location("tool_module", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+# Import from github_utils instead of defining locally
+from github_utils.common_utils import load_module
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
@@ -206,7 +200,9 @@ def run():
     
     github_ips = {
         "github.com": github_com_ip,
-        "api.github.com": api_github_ip
+        "api.github.com": api_github_ip,
+        "assets-cdn.github.com": api_github_ip,
+        "raw.githubusercontent.com": api_github_ip
     }
     
     repair_result = try_hosts_repair_with_fallback(github_ips)
@@ -218,7 +214,12 @@ def run():
         single_result = update_hosts(github_ips={"github.com": single_ip}, backup=True)
         if single_result["success"]:
             print(f"  ✓ 单IP修复成功: {single_ip}")
-            github_ips = {"github.com": single_ip}
+            github_ips = {
+                "github.com": single_ip,
+                "api.github.com": single_ip,
+                "assets-cdn.github.com": single_ip,
+                "raw.githubusercontent.com": single_ip
+            }
             repair_result = single_result
         else:
             print("  所有修复方案都失败")
@@ -228,27 +229,71 @@ def run():
 
     print_step(5, "验证修复结果")
     print("  等待 DNS 刷新...")
-    time.sleep(2)
-
-    final_check = check_github()
-    if final_check["status"] != "bad":
-        print("  ✓ 修复成功，GitHub 已恢复正常")
+    
+    # 全面刷新网络设置
+    print("  刷新 DNS 缓存...")
+    for _ in range(2):
+        os.system("ipconfig /flushdns")
+        os.system("ipconfig /registerdns")
+        time.sleep(1)
+    
+    # 增加等待时间，确保DNS完全刷新
+    time.sleep(5)
+    
+    # 多次重试检查，提高验证准确性
+    max_retries = 5
+    success = False
+    final_result = None
+    
+    for retry in range(max_retries):
+        print(f"  第 {retry+1}/{max_retries} 次验证...")
+        final_check = check_github()
+        if final_check["status"] != "bad":
+            success = True
+            final_result = final_check
+            break
+        else:
+            print(f"  当前状态: {final_check['status'].upper()}, 等待重试...")
+            time.sleep(3)
+    
+    if success:
+        print(f"  ✓ 修复成功！当前状态: {final_result['status'].upper()} ({final_result['ms']}ms)")
         return {"success": True, "action": "fixed", "message": "修复成功", "ips": github_ips}
     else:
-        print("  ✗ 修复后仍无法连接")
-        print_step(6, "深度诊断")
-        print("  尝试最后的方法...")
-        for ip in get_known_good_ips()[:3]:
-            print(f"    尝试 {ip}...")
-            temp_ips = {"github.com": ip}
-            if update_hosts(github_ips=temp_ips, backup=False)["success"]:
-                time.sleep(2)
-                if check_github()["status"] != "bad":
-                    print(f"  ✓ 使用 {ip} 成功!")
-                    return {"success": True, "action": "fixed", "message": f"最终方案成功: {ip}", "ips": temp_ips}
+        print("  ✗ 修复后仍无法连接..")
+    
+    print_step(6, "深度诊断")
+    print("  尝试最后的方法...")
+    final_ips = get_known_good_ips()[:3]
+    
+    for ip in final_ips:
+        print(f"    尝试 {ip}...")
+        temp_ips = {
+            "github.com": ip,
+            "api.github.com": ip,
+            "assets-cdn.github.com": ip,
+            "raw.githubusercontent.com": ip
+        }
         
-        print("  自动修复完全失败")
-        return {**fallback_manual_config(), "success": False, "action": "fail", "message": "修复后仍异常"}
+        if update_hosts(github_ips=temp_ips, backup=False)["success"]:
+            # 全面刷新网络
+            for _ in range(2):
+                os.system("ipconfig /flushdns")
+                os.system("ipconfig /registerdns")
+                time.sleep(1)
+            
+            time.sleep(3)
+            
+            # 多次检查该IP
+            for sub_retry in range(3):
+                final_check = check_github()
+                if final_check["status"] != "bad":
+                    print(f"  ✓ 使用 {ip} 修复成功! 当前状态: {final_check['status'].upper()} ({final_check['ms']}ms)")
+                    return {"success": True, "action": "fixed", "message": f"最终方案成功: {ip}", "ips": temp_ips}
+                time.sleep(2)
+    
+    print("  自动修复完全失败...")
+    return {**fallback_manual_config(), "success": False, "action": "fail", "message": "修复后仍异常"}
 
 
 if __name__ == "__main__":

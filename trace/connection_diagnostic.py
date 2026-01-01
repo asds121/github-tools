@@ -8,19 +8,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import importlib.util
-from pathlib import Path
-
 # 导入故障分析模块，用于记录故障信息
 from trace import fault_analysis
 
-def load_module(module_path):
-    """动态加载模块"""
-    path = Path(module_path)
-    spec = importlib.util.spec_from_file_location("tool_module", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+# 导入通用工具包中的load_module函数
+from github_utils.common_utils import load_module
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 

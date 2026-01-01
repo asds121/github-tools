@@ -13,19 +13,9 @@ from pathlib import Path
 
 # 从通用工具包导入辅助模块
 from github_utils import load_config, save_config, load_history, save_history
+from github_utils.common_utils import load_module
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import importlib.util
-from pathlib import Path
-
-def load_module(module_path):
-    """动态加载模块"""
-    path = Path(module_path)
-    spec = importlib.util.spec_from_file_location("tool_module", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT_DIR / "trace" / "data"

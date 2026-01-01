@@ -6,6 +6,12 @@ GitHub Checker v2.0.0 - Simple GitHub accessibility checker
 import time
 import socket
 import ssl
+import sys
+import os
+
+# Add parent directory to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from github_utils.common_utils import create_spinner
 
 TARGETS = [
     ("homepage", "github.com", 443),
@@ -37,18 +43,24 @@ def test_connection(host, port, timeout):
 
 def check_single():
     results = []
+    
     for name, host, port in TARGETS:
-        result = test_connection(host, port, DEFAULT_TIMEOUT)
+        # Start spinner using github_utils
+        spinner = create_spinner()
+        spinner_thread = spinner["start"]("Checking {host}... {char}", host=host)
+        
+        try:
+            result = test_connection(host, port, DEFAULT_TIMEOUT)
+        finally:
+            spinner["stop"](spinner_thread)
+        
         results.append((name, result))
         break
 
     homepage_result = results[0][1] if results else {"ok": False, "ms": 0}
     avg_ms = homepage_result["ms"]
 
-    if homepage_result["ok"]:
-        status = "good" if avg_ms < 3000 else "warn"
-    else:
-        status = "bad"
+    status = "good" if homepage_result["ok"] and avg_ms < 3000 else "warn" if homepage_result["ok"] else "bad"
 
     return {"status": status, "ms": avg_ms, "results": results}
 

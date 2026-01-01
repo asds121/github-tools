@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from trace import fault_analysis
 
-HOSTS_PATH = os.path.join(os.environ.get("SystemRoot", "C:\Windows"), "System32", "drivers", "etc", "hosts")
+HOSTS_PATH = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "drivers", "etc", "hosts")
 
 # 直接读取本地配置文件
 CONFIG_PATH = Path(__file__).resolve().parent / "config.json"
@@ -76,16 +76,46 @@ def update_hosts(github_ips=None, backup=None):
                 continue
             lines.append(line.strip())
         
+        # 扩展github_ips，添加更多GitHub相关域名
+        extended_ips = github_ips.copy()
+        main_ip = list(github_ips.values())[0] if github_ips else GITHUB_IPS["github.com"]
+        
+        # 添加更多GitHub相关域名
+        additional_domains = [
+            "assets-cdn.github.com",
+            "raw.githubusercontent.com",
+            "camo.githubusercontent.com",
+            "gist.githubusercontent.com",
+            "marketplace-screenshots.githubusercontent.com",
+            "user-images.githubusercontent.com",
+            "github.githubassets.com",
+            "avatars.githubusercontent.com",
+            "avatars0.githubusercontent.com",
+            "avatars1.githubusercontent.com",
+            "avatars2.githubusercontent.com",
+            "avatars3.githubusercontent.com",
+            "avatars4.githubusercontent.com",
+            "avatars5.githubusercontent.com",
+            "avatars6.githubusercontent.com",
+            "avatars7.githubusercontent.com",
+            "avatars8.githubusercontent.com"
+        ]
+        
+        for domain in additional_domains:
+            if domain not in extended_ips:
+                extended_ips[domain] = main_ip
+        
         # 添加新的github条目，确保格式统一
-        new_entries = [f"{v}    {k}" for k, v in github_ips.items()]
+        new_entries = [f"{v}    {k}" for k, v in extended_ips.items()]
         lines.extend(new_entries)
         
         # 写入文件，使用原编码或UTF-8
         with open(HOSTS_PATH, "wb") as f:
             f.write("\n".join(lines).encode("utf-8"))
         
-        # 刷新DNS缓存
+        # 全面刷新DNS缓存和网络设置
         os.system("ipconfig /flushdns")
+        os.system("ipconfig /registerdns")
         
         # 记录成功的修复操作
         fault_analysis.log_repair(
@@ -93,12 +123,13 @@ def update_hosts(github_ips=None, backup=None):
             success=True,
             details={
                 "github_ips": github_ips,
+                "extended_ips": extended_ips,
                 "entries_added": len(new_entries),
                 "method": "hosts_file_update"
             }
         )
         
-        return {"success": True, "message": "Hosts文件更新成功"}
+        return {"success": True, "message": "Hosts文件更新成功", "extended_ips": extended_ips, "entries_added": len(new_entries)}
     except Exception as e:
         # 记录失败的修复操作
         fault_analysis.log_repair(

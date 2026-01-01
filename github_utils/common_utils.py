@@ -113,3 +113,41 @@ def get_tools_order():
 def get_ui_config():
     """获取UI配置"""
     return CONFIG["ui"]
+
+
+def create_spinner():
+    """创建一个简单的spinner动画控制对象"""
+    import threading
+    import time
+    spinner_chars = "|/-\\"
+    spinner_index = 0
+    stop_spinner = False
+    
+    def spinner_thread_func(message_format, **kwargs):
+        """Spinner线程函数"""
+        nonlocal spinner_index
+        while not stop_spinner:
+            char = spinner_chars[spinner_index % len(spinner_chars)]
+            message = message_format.format(char=char, **kwargs)
+            print(f"\r{message}", end="", flush=True)
+            spinner_index += 1
+            time.sleep(0.1)
+    
+    def start(message_format, **kwargs):
+        """启动spinner动画"""
+        thread = threading.Thread(target=spinner_thread_func, args=(message_format,), kwargs=kwargs)
+        thread.daemon = True
+        thread.start()
+        return thread
+    
+    def stop(thread):
+        """停止spinner动画"""
+        nonlocal stop_spinner
+        stop_spinner = True
+        thread.join()
+        print("\r", end="", flush=True)  # Clear spinner line
+    
+    return {
+        "start": start,
+        "stop": stop
+    }

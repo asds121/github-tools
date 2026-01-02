@@ -76,37 +76,15 @@ def update_hosts(github_ips=None, backup=None):
                 continue
             lines.append(line.strip())
         
-        # 扩展github_ips，添加更多GitHub相关域名
-        extended_ips = github_ips.copy()
-        main_ip = list(github_ips.values())[0] if github_ips else GITHUB_IPS["github.com"]
-        
-        # 添加更多GitHub相关域名
-        additional_domains = [
-            "assets-cdn.github.com",
-            "raw.githubusercontent.com",
-            "camo.githubusercontent.com",
-            "gist.githubusercontent.com",
-            "marketplace-screenshots.githubusercontent.com",
-            "user-images.githubusercontent.com",
-            "github.githubassets.com",
-            "avatars.githubusercontent.com",
-            "avatars0.githubusercontent.com",
-            "avatars1.githubusercontent.com",
-            "avatars2.githubusercontent.com",
-            "avatars3.githubusercontent.com",
-            "avatars4.githubusercontent.com",
-            "avatars5.githubusercontent.com",
-            "avatars6.githubusercontent.com",
-            "avatars7.githubusercontent.com",
-            "avatars8.githubusercontent.com"
-        ]
-        
-        for domain in additional_domains:
-            if domain not in extended_ips:
-                extended_ips[domain] = main_ip
+        # 只添加指定的GitHub域名，不扩展额外域名
+        # 确保只写入github.com和api.github.com
+        filtered_ips = {}
+        for domain, ip in github_ips.items():
+            if domain in ["github.com", "api.github.com"]:
+                filtered_ips[domain] = ip
         
         # 添加新的github条目，确保格式统一
-        new_entries = [f"{v}    {k}" for k, v in extended_ips.items()]
+        new_entries = [f"{v}    {k}" for k, v in filtered_ips.items()]
         lines.extend(new_entries)
         
         # 写入文件，使用原编码或UTF-8

@@ -12,10 +12,17 @@ if CONFIG_PATH.exists():
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         CONFIG = json.load(f)
     DNS_SERVERS = CONFIG["dns_servers"]
-    DOMAIN = CONFIG["domain"]
+    # 支持单域名和多域名配置
+    if "domains" in CONFIG:
+        DOMAINS = CONFIG["domains"]
+        DOMAIN = DOMAINS[0]  # 保持向后兼容
+    else:
+        DOMAINS = [CONFIG["domain"]]
+        DOMAIN = CONFIG["domain"]
 else:
     # 默认配置
-    DNS_SERVERS = ["114.114.114.114", "8.8.8.8", "1.1.1.1"]
+    DNS_SERVERS = ["114.114.114.114", "8.8.8.8", "1.1.1.1", "8.8.4.4", "1.0.0.1", "223.5.5.5"]
+    DOMAINS = ["github.com", "api.github.com"]
     DOMAIN = "github.com"
 
 def get_ips(domain=None, dns=None):
@@ -62,10 +69,12 @@ def get_ips(domain=None, dns=None):
         return []
 
 def resolve_all():
-    """获取所有DNS服务器的IP并返回列表"""
+    """获取所有DNS服务器和所有域名的IP并返回列表"""
     all_ips = set()
-    for dns in DNS_SERVERS:
-        all_ips.update(get_ips(DOMAIN, dns))
+    for domain in DOMAINS:
+        for dns in DNS_SERVERS:
+            ips = get_ips(domain, dns)
+            all_ips.update(ips)
     return sorted(all_ips)
 
 def main():

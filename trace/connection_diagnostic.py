@@ -47,6 +47,23 @@ def ping_host(host, count=1, timeout=2000):
         return False
 
 
+def test_tcp_connectivity(host, port=443, timeout=5):
+    """测试TCP连接，支持多个端口和超时设置"""
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
+def test_multiple_ports(host, ports=(443, 80, 22), timeout=3):
+    """测试多个端口的连接情况"""
+    results = {}
+    for port in ports:
+        results[port] = test_tcp_connectivity(host, port, timeout)
+    return results
+
+
 def check_local_network():
     """检查本地网络连通性"""
     print("\n[1/5] 本地网络检查")

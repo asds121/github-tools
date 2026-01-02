@@ -64,7 +64,7 @@ def load_repair_history():
 
 def save_repair_history(history):
     """保存修复历史记录"""
-    with open(REPAIR_HISTORY, "w", encoding="utf-8") as f:
+    with open(REPAIR_HISTORY, "w", encoding="utf-8-sig") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
 
 
@@ -92,7 +92,10 @@ def log_repair(scheme, success, fault_type=None, details=None):
         "scheme_name": REPAIR_SCHEMES.get(scheme, "未知修复方案"),
         "success": success,
         "fault_type": fault_type,
-        "details": details or {}
+        "details": details or {},
+        "reason": details.get("reason", "未明确"),
+        "fix_method": details.get("fix_method", "未记录"),
+        "verification": details.get("verification", "未验证")
     }
     
     history = load_repair_history()

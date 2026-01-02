@@ -56,7 +56,4 @@ temp/
 
 # Project text files
 # 保留核心规则文件，忽略其他临时文本文件
-design.txt
-result.txt
-*.tmp.txt
-*.log.txt
+*.txt

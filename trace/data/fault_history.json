@@ -8,5 +8,55 @@
       "domain": "github.com"
     },
     "latency": null
+  },
+  {
+    "timestamp": "2026-01-01T21:42:06.289494",
+    "fault_type": "tcp_failure",
+    "fault_name": "TCP连接失败",
+    "details": {
+      "ips": [
+        "20.205.243.166"
+      ],
+      "reason": "所有IP的TCP连接都失败",
+      "port": 443
+    },
+    "latency": null
+  },
+  {
+    "timestamp": "2026-01-01T21:42:09.304353",
+    "fault_type": "http_failure",
+    "fault_name": "HTTP响应失败",
+    "details": {
+      "ips": [
+        "20.205.243.166"
+      ],
+      "reason": "所有IP的HTTP响应都失败"
+    },
+    "latency": null
+  },
+  {
+    "timestamp": "2026-01-02T16:20:04.056270",
+    "fault_type": "tcp_failure",
+    "fault_name": "TCP连接失败",
+    "details": {
+      "ips": [
+        "20.205.243.166"
+      ],
+      "reason": "所有IP的TCP连接都失败",
+      "port": 443
+    },
+    "latency": null
+  },
+  {
+    "timestamp": "2026-01-02T16:20:07.072099",
+    "fault_type": "http_failure",
+    "fault_name": "HTTP响应失败",
+    "details": {
+      "ips": [
+        "20.205.243.166"
+      ],
+      "reason": "所有IP的HTTP响应都失败"
+    },
+    "latency": null
   }
 ]

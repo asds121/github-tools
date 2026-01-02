@@ -1,7 +1,7 @@
 {
     "name": "GitHub DNS查询",
     "description": "从DNS服务器获取GitHub的IP地址",
-    "dns_servers": ["223.5.5.5", "8.8.8.8"],
-    "domain": "github.com",
+    "dns_servers": ["223.5.5.5", "8.8.8.8", "1.1.1.1", "114.114.114.114", "8.8.4.4", "1.0.0.1"],
+    "domains": ["github.com", "api.github.com"],
     "timeout": 5
 }

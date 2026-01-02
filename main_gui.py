@@ -72,8 +72,20 @@ class NetworkIndicator(Canvas):
     
     def update_status(self, result):
         """根据检测结果更新状态"""
-        if result["status"] == "good":
-            self.set_status("online")
+        # 处理不同工具的返回格式
+        # 1. 有status字段的情况（如checker工具）
+        if "status" in result:
+            if result["status"] == "good":
+                self.set_status("online")
+            else:
+                self.set_status("offline")
+        # 2. 只有success字段的情况（如auto_diagnose工具）
+        elif "success" in result:
+            if result["success"]:
+                self.set_status("online")
+            else:
+                self.set_status("offline")
+        # 3. 默认情况
         else:
             self.set_status("offline")
 
@@ -168,15 +180,21 @@ def main():
             if tool_key == "checker" or tool_key == "auto_diagnose":
                 # 连通性检测和一键检测修复工具的结果格式
                 network_indicator.update_status(data)
+                current_time = time.strftime("%H:%M:%S")
+                last_check_label.config(text=f"最后检测: {current_time}")
             elif tool_key == "connection_diagnostic":
                 # 连接诊断工具的结果格式
                 if data.get("github_status"):
                     network_indicator.update_status(data["github_status"])
+                    current_time = time.strftime("%H:%M:%S")
+                    last_check_label.config(text=f"最后检测: {current_time}")
             elif tool_key == "quick_speed_test":
                 # 一键测速工具的结果格式
                 if data.get("success") and data.get("fastest_latency"):
                     # 如果测速成功，说明网络连接正常
                     network_indicator.set_status("online")
+                    current_time = time.strftime("%H:%M:%S")
+                    last_check_label.config(text=f"最后检测: {current_time}")
         else:
             result_text.insert("end", f"错误: {data}\n")
         result_text.see("end")

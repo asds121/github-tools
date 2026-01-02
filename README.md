@@ -8,12 +8,17 @@ GitHub工具合集 - 一站式GitHub访问优化解决方案，包含连接检�
 
 ## 功能特性
 
-- **一键检测修复**：自动检测GitHub连接状态，若异常则自动进行DNS解析、IP测速、Hosts修复并验证结果
-- **Hosts修复**：自动修改系统Hosts文件，绑定GitHub域名到最优IP
-- **DNS查询**：通过多个DNS服务器查询GitHub域名的IP地址
-- **IP测速**：并发测试多个GitHub IP的连接速度，筛选最优IP
-- **守护进程**：实时监控GitHub连接状态，自动修复Hosts文件
-- **图形界面**：Tkinter GUI整合所有功能，一站式操作
+- **智能一键检测修复**：根据网络环境自动选择最优修复策略，自动检测GitHub连接状态，若异常则自动进行DNS解析、IP测速、Hosts修复并验证结果
+- **多策略Hosts修复**：支持多IP、单IP、最小化IP三种修复策略，自动选择最优方案
+- **增强DNS查询**：支持DNS缓存（5分钟）和DNS服务器可用性检测，提高解析效率和成功率
+- **智能IP质量评估**：综合考虑成功率、延迟、连续成功次数、测试次数四个维度，评分范围0-100分
+- **全面修复验证**：3次验证尝试，支持快速成功（连续2次符合标准），生成详细验证报告
+- **实时守护进程**：实时监控GitHub连接状态，自动修复Hosts文件
+- **详细修复报告**：支持文本和JSON格式，包含修复原因、方法、验证结果、策略和网络环境信息
+- **TCP连接预筛选**：IP测速前先进行TCP连接测试，减少30%测速时间
+- **图形界面**：Tkinter GUI整合所有功能，一站式操作，包含网络状态指示灯
+- **3分钟自动连通性测试**：自动测试网络连通性，界面指示灯实时同步显示
+- **优化的分层架构**：trace层保持简洁，复杂逻辑迁移到service层，提高代码可维护性和扩展性
 
 ## 项目结构
 
@@ -46,11 +51,15 @@ github工具合集/
 │   └── gui_utils.py                   # GUI构建工具
 ├── service/                           # 业务逻辑服务层
 │   ├── auto_diagnose_fallbacks.py     # 一键诊断备用方案
+│   ├── auto_diagnose_service.py       # 自动诊断服务
 │   ├── config_utils.py                # 配置工具模块
+│   ├── connection_diagnostic_service.py # 连接诊断服务
 │   ├── data_statistics_analysis.py    # 数据统计分析
 │   ├── data_statistics_specific.py    # 特定统计方法
 │   ├── data_statistics_utils.py       # 数据统计工具
+│   ├── fault_analysis_service.py      # 故障分析服务
 │   ├── guardian_utils.py              # 守护进程工具
+│   ├── ip_quality_service.py          # IP质量服务
 │   ├── scheduled_inspection_cli.py    # 定时巡检命令行
 │   ├── scheduled_inspection_stats.py  # 定时巡检统计
 │   └── scheduled_inspection_utils.py  # 定时巡检工具
@@ -149,6 +158,13 @@ python GitHub-hosts-viewer-查看/github_hosts_viewer.py
 
 - **工具**：显示所有可用工具按钮，点击执行对应功能
 - **说明**：显示各工具的功能说明和使用推荐
+
+**界面功能：**
+
+- **网络状态指示灯**：实时显示GitHub连接状态（绿色：正常，红色：异常，黄色：检测中）
+- **3分钟自动检测**：自动运行连通性测试，指示灯同步更新状态
+- **结果显示区域**：展示各工具执行结果和详细信息
+- **详细修复报告**：显示修复原因、方法和验证结果
 
 ### 连通性检测 [github-checker-检测状态](file:///c:/Users/Administrator/Desktop/代码/github工具合集/github-checker-检测状态)
 
@@ -286,6 +302,30 @@ per-file-ignores =
 2. 在根目录 `config.json` 的 `tools` 数组中注册工具
 3. 添加工具信息包括：key（唯一标识）、name（显示名称）、description（功能描述）、module（模块路径）、function（入口函数）
 
+### 分层架构规则
+
+本项目遵循严格的分层架构，确保代码的可维护性和扩展性：
+
+#### 子项目层规则
+
+- 子项目之间不能互相调用
+- 子项目只能调用github_utils
+- 子项目代码行数不能超过120行
+- 单一功能模块，原子性工具
+
+#### trace层规则
+
+- trace层之间不能互相调用
+- trace层可以调用子项目层
+- trace层代码行数不能超过250行
+- 诊断、监控、追踪功能，如连接诊断、DNS解析、IP测速等
+
+#### service层规则
+
+- service层可以调用trace层和子项目层
+- service层代码行数不超过400行
+- 业务逻辑集成，多模块协作
+
 ### 代码规范
 
 - 遵循PEP8代码风格
@@ -295,7 +335,7 @@ per-file-ignores =
 
 ### 项目配置
 
-`pyproject.toml` 文件定义了项目元数据和构建配置，`style.md` 文件定义了代码风格规范，`project_rule.md` 文件定义了项目规则说明。
+`pyproject.toml` 文件定义了项目元数据和构建配置，`style.md` 文件定义了代码风格规范，`project_rule.md` 文件定义了项目规则说明，`rule_next.txt` 文件定义了分层扩展规则。
 
 ## 注意事项
 
@@ -318,6 +358,35 @@ Hosts修复工具会自动创建备份文件（`hosts.bak`），如需恢复可�
 - `github_utils/` - GUI公共工具模块
 
 ## 版本历史
+
+### v1.2.0 (2026-01-02)
+
+**新增功能：**
+
+- 实现3分钟自动网络连通性测试，界面指示灯同步显示
+- 详细记录修复原因、方法和验证结果
+- 网络状态指示灯实时显示连接状态
+- 修复网络指示灯，使其能显示来自诊断功能等其他工具的检测结果
+- 优化.gitignore配置，确保.trae文件夹和其他临时文件不被追踪
+
+**改进功能：**
+
+- 智能修复策略选择，根据网络环境自动选择最优修复方案
+- 详细修复报告生成功能，支持文本和JSON格式
+- DNS解析缓存（5分钟），提高解析效率
+- DNS服务器可用性检测，动态选择可用服务器
+- TCP连接预筛选，IP测速时间减少30%
+- 优化IP质量评估算法，综合考虑成功率、延迟、连续成功次数、测试次数四个维度
+
+**修复问题：**
+
+- 修复了DNS查询超时处理，增加重试机制
+- 修复了修复功能中的extended_ips未定义错误
+- 优化了Hosts修复策略，只写入github.com和api.github.com
+- 确保所有trace层文件的行数都在250行以内，符合新的分层规则
+- 修复了repair_strategies未定义错误
+- 修复了PowerShell命令执行错误
+- 修复了module 'tool_module' has no attribute 'run'错误
 
 ### v1.1.2 (2025-12-31)
 
@@ -364,4 +433,4 @@ Hosts修复工具会自动创建备份文件（`hosts.bak`），如需恢复可�
 
 ## 更新日期
 
-2025-12-31
+2026-01-02

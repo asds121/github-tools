@@ -162,6 +162,21 @@ def main():
         if status == "success":
             result_text.insert("end", json.dumps(data, ensure_ascii=False,
                                                  indent=2) + "\n")
+            
+            # 更新网络状态指示灯
+            # 检查工具类型和结果格式，更新网络状态指示灯
+            if tool_key == "checker" or tool_key == "auto_diagnose":
+                # 连通性检测和一键检测修复工具的结果格式
+                network_indicator.update_status(data)
+            elif tool_key == "connection_diagnostic":
+                # 连接诊断工具的结果格式
+                if data.get("github_status"):
+                    network_indicator.update_status(data["github_status"])
+            elif tool_key == "quick_speed_test":
+                # 一键测速工具的结果格式
+                if data.get("success") and data.get("fastest_latency"):
+                    # 如果测速成功，说明网络连接正常
+                    network_indicator.set_status("online")
         else:
             result_text.insert("end", f"错误: {data}\n")
         result_text.see("end")

@@ -6,10 +6,6 @@ import json
 import ctypes
 from pathlib import Path
 
-# 导入故障分析模块，用于记录修复信息
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from trace import fault_analysis
-
 HOSTS_PATH = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "drivers", "etc", "hosts")
 
 # 直接读取本地配置文件
@@ -95,30 +91,8 @@ def update_hosts(github_ips=None, backup=None):
         os.system("ipconfig /flushdns")
         os.system("ipconfig /registerdns")
         
-        # 记录成功的修复操作
-        fault_analysis.log_repair(
-            scheme="hosts_update",
-            success=True,
-            details={
-                "github_ips": github_ips,
-                "extended_ips": extended_ips,
-                "entries_added": len(new_entries),
-                "method": "hosts_file_update"
-            }
-        )
-        
-        return {"success": True, "message": "Hosts文件更新成功", "extended_ips": extended_ips, "entries_added": len(new_entries)}
+        return {"success": True, "message": "Hosts文件更新成功", "extended_ips": filtered_ips, "entries_added": len(new_entries)}
     except Exception as e:
-        # 记录失败的修复操作
-        fault_analysis.log_repair(
-            scheme="hosts_update",
-            success=False,
-            details={
-                "error": str(e),
-                "github_ips": github_ips,
-                "reason": "可能需要管理员权限或文件被占用"
-            }
-        )
         return {"success": False, "error": str(e), "details": "可能需要管理员权限或文件被占用"}
 
 def main():

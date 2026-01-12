@@ -30,29 +30,36 @@ REPAIR_SCHEMES = {
     "other": "其他修复方案"
 }
 
+def _get_date_range(days=30):
+    """获取日期范围"""
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    return start_date, end_date
+
+def _is_in_date_range(record, start_date, end_date):
+    """检查记录是否在指定日期范围内"""
+    record_date = datetime.fromisoformat(record["timestamp"])
+    return start_date <= record_date <= end_date
+
+def _calculate_success_rate(successful, total):
+    """计算成功率"""
+    return round((successful / total * 100) if total > 0 else 0, 1)
+
 def analyze_fault_trends(days=30):
     """分析故障趋势"""
     fault_history = fault_analysis.load_fault_history()
     repair_history = fault_analysis.load_repair_history()
+    start_date, end_date = _get_date_range(days)
     
-    # 计算日期范围
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-    
-    # 按日期分组故障记录
-    daily_faults = defaultdict(list)
+    # 按日期分组故障和修复记录
+    daily_faults, daily_repairs = defaultdict(list), defaultdict(list)
     for record in fault_history:
-        record_date = datetime.fromisoformat(record["timestamp"])
-        if start_date <= record_date <= end_date:
-            date_key = record_date.strftime("%Y-%m-%d")
+        if _is_in_date_range(record, start_date, end_date):
+            date_key = datetime.fromisoformat(record["timestamp"]).strftime("%Y-%m-%d")
             daily_faults[date_key].append(record)
-    
-    # 按日期分组修复记录
-    daily_repairs = defaultdict(list)
     for record in repair_history:
-        record_date = datetime.fromisoformat(record["timestamp"])
-        if start_date <= record_date <= end_date:
-            date_key = record_date.strftime("%Y-%m-%d")
+        if _is_in_date_range(record, start_date, end_date):
+            date_key = datetime.fromisoformat(record["timestamp"]).strftime("%Y-%m-%d")
             daily_repairs[date_key].append(record)
     
     # 生成趋势数据
@@ -60,30 +67,20 @@ def analyze_fault_trends(days=30):
     current_date = start_date
     while current_date <= end_date:
         date_key = current_date.strftime("%Y-%m-%d")
-        
-        # 统计当日故障
         day_faults = daily_faults.get(date_key, [])
         day_repairs = daily_repairs.get(date_key, [])
         
-        # 故障类型统计
+        # 统计故障类型和修复成功率
         fault_type_count = defaultdict(int)
         for fault in day_faults:
             fault_type_count[fault["fault_type"]] += 1
-        
-        # 修复成功率统计
         total_repairs = len(day_repairs)
         successful_repairs = sum(1 for r in day_repairs if r["success"])
-        success_rate = (successful_repairs / total_repairs * 100) if total_repairs > 0 else 0
+        success_rate = _calculate_success_rate(successful_repairs, total_repairs)
         
-        trend_data.append({
-            "date": date_key,
-            "fault_count": len(day_faults),
-            "repair_count": total_repairs,
-            "successful_repairs": successful_repairs,
-            "success_rate": round(success_rate, 1),
-            "fault_types": dict(fault_type_count)
-        })
-        
+        trend_data.append({"date": date_key, "fault_count": len(day_faults), "repair_count": total_repairs,
+                         "successful_repairs": successful_repairs, "success_rate": success_rate,
+                         "fault_types": dict(fault_type_count)})
         current_date += timedelta(days=1)
     
     return trend_data
@@ -91,29 +88,21 @@ def analyze_fault_trends(days=30):
 def analyze_fault_distribution(days=30):
     """分析故障类型分布"""
     fault_history = fault_analysis.load_fault_history()
-    
-    # 计算日期范围
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
+    start_date, end_date = _get_date_range(days)
     
     # 统计故障类型
     fault_stats = defaultdict(lambda: {
-        "count": 0,
-        "name": "未知故障",
-        "first_occurrence": None,
-        "last_occurrence": None,
-        "avg_latency": []
+        "count": 0, "name": "未知故障", "first_occurrence": None, "last_occurrence": None, "avg_latency": []
     })
     
     for record in fault_history:
-        record_date = datetime.fromisoformat(record["timestamp"])
-        if start_date <= record_date <= end_date:
+        if _is_in_date_range(record, start_date, end_date):
             fault_type = record["fault_type"]
             fault_stats[fault_type]["count"] += 1
             fault_stats[fault_type]["name"] = record["fault_name"]
             
             # 更新首次和末次出现时间
-            if fault_stats[fault_type]["first_occurrence"] is None:
+            if not fault_stats[fault_type]["first_occurrence"]:
                 fault_stats[fault_type]["first_occurrence"] = record["timestamp"]
             fault_stats[fault_type]["last_occurrence"] = record["timestamp"]
             
@@ -133,33 +122,15 @@ def analyze_fault_distribution(days=30):
 def analyze_repair_effectiveness(days=30):
     """分析修复方案效果"""
     repair_history = fault_analysis.load_repair_history()
-    
-    # 计算日期范围
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
+    start_date, end_date = _get_date_range(days)
     
     # 统计修复方案效果
-    repair_stats = defaultdict(lambda: {
-        "count": 0,
-        "successful": 0,
-        "name": "未知修复方案",
-        "success_rate": 0
-    })
-    
-    # 按故障类型统计修复效果
-    fault_repair_stats = defaultdict(lambda: defaultdict(lambda: {
-        "count": 0,
-        "successful": 0,
-        "success_rate": 0
-    }))
+    repair_stats = defaultdict(lambda: {"count": 0, "successful": 0, "name": "未知修复方案", "success_rate": 0})
+    fault_repair_stats = defaultdict(lambda: defaultdict(lambda: {"count": 0, "successful": 0, "success_rate": 0}))
     
     for record in repair_history:
-        record_date = datetime.fromisoformat(record["timestamp"])
-        if start_date <= record_date <= end_date:
-            scheme = record["scheme"]
-            success = record["success"]
-            fault_type = record["fault_type"]
-            
+        if _is_in_date_range(record, start_date, end_date):
+            scheme, success, fault_type = record["scheme"], record["success"], record["fault_type"]
             # 总体修复方案统计
             repair_stats[scheme]["count"] += 1
             if success:
@@ -175,58 +146,47 @@ def analyze_repair_effectiveness(days=30):
     # 计算成功率
     for scheme, stats in repair_stats.items():
         if stats["count"] > 0:
-            stats["success_rate"] = round(stats["successful"] / stats["count"] * 100, 1)
-    
-    # 计算按故障类型的成功率
+            stats["success_rate"] = _calculate_success_rate(stats["successful"], stats["count"])
     for fault_type, schemes in fault_repair_stats.items():
         for scheme, stats in schemes.items():
             if stats["count"] > 0:
-                stats["success_rate"] = round(stats["successful"] / stats["count"] * 100, 1)
+                stats["success_rate"] = _calculate_success_rate(stats["successful"], stats["count"])
     
-    return {
-        "overall": dict(repair_stats),
-        "by_fault_type": dict(fault_repair_stats)
-    }
+    return {"overall": dict(repair_stats), "by_fault_type": dict(fault_repair_stats)}
 
 def get_fault_summary(days=30):
     """获取故障统计摘要"""
     fault_history = fault_analysis.load_fault_history()
     repair_history = fault_analysis.load_repair_history()
+    start_date, end_date = _get_date_range(days)
     
-    # 计算日期范围
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
-    
-    # 统计故障总数
+    # 统计故障和修复数据
     total_faults = 0
     fault_type_count = defaultdict(int)
-    for record in fault_history:
-        record_date = datetime.fromisoformat(record["timestamp"])
-        if start_date <= record_date <= end_date:
-            total_faults += 1
-            fault_type_count[record["fault_type"]] += 1
-    
-    # 统计修复总数
     total_repairs = 0
     successful_repairs = 0
     repair_scheme_count = defaultdict(int)
+    
+    for record in fault_history:
+        if _is_in_date_range(record, start_date, end_date):
+            total_faults += 1
+            fault_type_count[record["fault_type"]] += 1
+    
     for record in repair_history:
-        record_date = datetime.fromisoformat(record["timestamp"])
-        if start_date <= record_date <= end_date:
+        if _is_in_date_range(record, start_date, end_date):
             total_repairs += 1
             repair_scheme_count[record["scheme"]] += 1
             if record["success"]:
                 successful_repairs += 1
     
     # 计算修复成功率
-    repair_success_rate = (successful_repairs / total_repairs * 100) if total_repairs > 0 else 0
+    repair_success_rate = _calculate_success_rate(successful_repairs, total_repairs)
     
-    # 获取最常见故障类型
+    # 获取最常见故障类型和最有效的修复方案
     most_common_fault = None
     if fault_type_count:
         most_common_fault = max(fault_type_count.items(), key=lambda x: x[1])[0]
     
-    # 获取最有效的修复方案
     most_effective_scheme = None
     if repair_scheme_count:
         most_effective_scheme = max(repair_scheme_count.items(), key=lambda x: x[1])[0]
@@ -235,12 +195,27 @@ def get_fault_summary(days=30):
         "time_range": f"最近{days}天",
         "total_faults": total_faults,
         "total_repairs": total_repairs,
-        "repair_success_rate": round(repair_success_rate, 1),
+        "repair_success_rate": repair_success_rate,
         "most_common_fault": most_common_fault,
         "most_effective_scheme": most_effective_scheme,
         "fault_type_count": dict(fault_type_count),
         "repair_scheme_count": dict(repair_scheme_count)
     }
+
+def _print_recent_records(title, records, record_type="fault"):
+    """打印最近的记录"""
+    print(f"\n【{title}】")
+    print("-" * 50)
+    for i, record in enumerate(records[:5], 1):
+        timestamp = datetime.fromisoformat(record['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
+        if record_type == "fault":
+            print(f"  {i}. {timestamp} - {record['fault_name']}")
+        else:
+            status = "成功" if record['success'] else "失败"
+            print(f"  {i}. {timestamp} - {record['scheme_name']} - {status}")
+        if record['details']:
+            for key, value in record['details'].items():
+                print(f"     {key}: {value}")
 
 def print_fault_analysis(days=30):
     """打印故障分析报告"""
@@ -278,30 +253,11 @@ def print_fault_analysis(days=30):
     for scheme, stats in sorted(repair_effect['overall'].items(), key=lambda x: x[1]['success_rate'], reverse=True):
         print(f"  {stats['name']:<20} 成功率: {stats['success_rate']:>5}%  ({stats['successful']}/{stats['count']} 次)")
     
-    # 最近故障记录
-    print("\n【最近故障记录】")
-    print("-" * 50)
-    fault_history = fault_analysis.load_fault_history()
-    recent_faults = sorted(fault_history, key=lambda x: x['timestamp'], reverse=True)[:5]
-    for i, fault in enumerate(recent_faults, 1):
-        timestamp = datetime.fromisoformat(fault['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
-        print(f"  {i}. {timestamp} - {fault['fault_name']}")
-        if fault['details']:
-            for key, value in fault['details'].items():
-                print(f"     {key}: {value}")
-    
-    # 最近修复记录
-    print("\n【最近修复记录】")
-    print("-" * 50)
-    repair_history = fault_analysis.load_repair_history()
-    recent_repairs = sorted(repair_history, key=lambda x: x['timestamp'], reverse=True)[:5]
-    for i, repair in enumerate(recent_repairs, 1):
-        timestamp = datetime.fromisoformat(repair['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
-        status = "成功" if repair['success'] else "失败"
-        print(f"  {i}. {timestamp} - {repair['scheme_name']} - {status}")
-        if repair['details']:
-            for key, value in repair['details'].items():
-                print(f"     {key}: {value}")
+    # 最近故障和修复记录
+    fault_history = sorted(fault_analysis.load_fault_history(), key=lambda x: x['timestamp'], reverse=True)
+    repair_history = sorted(fault_analysis.load_repair_history(), key=lambda x: x['timestamp'], reverse=True)
+    _print_recent_records("最近故障记录", fault_history, "fault")
+    _print_recent_records("最近修复记录", repair_history, "repair")
     
     print("\n" + "=" * 60)
     print("故障分析报告完成")
@@ -319,92 +275,75 @@ def generate_repair_report(repair_id=None, format="text"):
     """
     repair_history = fault_analysis.load_repair_history()
     
+    # 筛选修复记录
     if repair_id:
-        # 生成单个修复记录报告
         repair_record = next((r for r in repair_history if r.get("id") == repair_id), None)
         if not repair_record:
             return f"找不到ID为{repair_id}的修复记录"
         repair_records = [repair_record]
     else:
-        # 生成所有修复记录报告，按时间倒序排序
         repair_records = sorted(repair_history, key=lambda x: x['timestamp'], reverse=True)
     
     if format == "json":
-        # JSON格式报告
-        report = {
+        return json.dumps({
             "generated_at": datetime.now().isoformat(),
             "repair_count": len(repair_records),
             "repair_records": repair_records
-        }
-        return json.dumps(report, ensure_ascii=False, indent=2)
-    else:
-        # 文本格式报告
-        report_lines = []
-        report_lines.append("=" * 80)
-        report_lines.append("GitHub连接修复详细报告")
-        report_lines.append("=" * 80)
-        report_lines.append(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        report_lines.append(f"修复记录数量: {len(repair_records)}")
-        report_lines.append("=" * 80)
-        
-        for i, record in enumerate(repair_records, 1):
-            report_lines.append("")
-            report_lines.append(f"修复记录 #{i}")
-            report_lines.append("-" * 80)
-            
-            # 修复基本信息
-            timestamp = datetime.fromisoformat(record["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")
-            report_lines.append(f"修复时间: {timestamp}")
-            report_lines.append(f"修复方案: {record['scheme_name']} ({record['scheme']})")
-            report_lines.append(f"修复状态: {'成功' if record['success'] else '失败'}")
-            
-            if record['fault_type']:
-                fault_name = FAULT_TYPES.get(record['fault_type'], "未知故障")
-                report_lines.append(f"故障类型: {fault_name} ({record['fault_type']})")
-            
-            # 详细修复信息
-            report_lines.append("")
-            report_lines.append("详细信息:")
-            
-            # 从details中提取更多信息
-            details = record.get("details", {})
-            
-            # 修复原因
-            report_lines.append(f"  修复原因: {details.get('reason', '未明确')}")
-            
-            # 修复方法
-            report_lines.append(f"  修复方法: {details.get('fix_method', '未记录')}")
-            
-            # 验证结果
-            report_lines.append(f"  验证结果: {details.get('verification', '未验证')}")
-            
-            # 修复策略
-            if details.get('strategy'):
-                report_lines.append(f"  修复策略: {details['strategy']}")
-            
-            # 网络环境信息
-            if details.get('network_env'):
-                network_env = details['network_env']
-                report_lines.append(f"  网络环境: 可用IP数={network_env.get('available_ips_count', 'N/A')}, "
-                                  f"当前延迟={network_env.get('current_latency', 'N/A')}ms, "
-                                  f"DNS可用={'是' if network_env.get('dns_available') else '否'}")
-            
-            # 修复前后状态对比
-            if 'before' in details and 'after' in details:
-                report_lines.append(f"  修复前: {details['before']}")
-                report_lines.append(f"  修复后: {details['after']}")
-            
-            # 其他详细信息
-            for key, value in details.items():
-                if key not in ['reason', 'fix_method', 'verification', 'strategy', 'network_env', 'before', 'after']:
-                    report_lines.append(f"  {key}: {value}")
-        
+        }, ensure_ascii=False, indent=2)
+    
+    # 文本格式报告
+    report_lines = ["=" * 80, "GitHub连接修复详细报告", "=" * 80,
+                   f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                   f"修复记录数量: {len(repair_records)}", "=" * 80]
+    
+    for i, record in enumerate(repair_records, 1):
         report_lines.append("")
-        report_lines.append("=" * 80)
-        report_lines.append("报告结束")
-        report_lines.append("=" * 80)
+        report_lines.append(f"修复记录 #{i}")
+        report_lines.append("-" * 80)
         
-        return "\n".join(report_lines)
+        # 修复基本信息
+        timestamp = datetime.fromisoformat(record["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")
+        report_lines.append(f"修复时间: {timestamp}")
+        report_lines.append(f"修复方案: {record['scheme_name']} ({record['scheme']})")
+        report_lines.append(f"修复状态: {'成功' if record['success'] else '失败'}")
+        
+        if record['fault_type']:
+            fault_name = FAULT_TYPES.get(record['fault_type'], "未知故障")
+            report_lines.append(f"故障类型: {fault_name} ({record['fault_type']})")
+        
+        # 详细修复信息
+        report_lines.append("")
+        report_lines.append("详细信息:")
+        
+        details = record.get("details", {})
+        # 核心详细信息
+        core_details = {"修复原因": details.get('reason', '未明确'),
+                        "修复方法": details.get('fix_method', '未记录'),
+                        "验证结果": details.get('verification', '未验证')}
+        
+        for label, value in core_details.items():
+            report_lines.append(f"  {label}: {value}")
+        
+        # 可选详细信息
+        if details.get('strategy'):
+            report_lines.append(f"  修复策略: {details['strategy']}")
+        
+        if details.get('network_env'):
+            network_env = details['network_env']
+            report_lines.append(f"  网络环境: 可用IP数={network_env.get('available_ips_count', 'N/A')}, "
+                              f"当前延迟={network_env.get('current_latency', 'N/A')}ms, "
+                              f"DNS可用={'是' if network_env.get('dns_available') else '否'}")
+        
+        if 'before' in details and 'after' in details:
+            report_lines.extend([f"  修复前: {details['before']}", f"  修复后: {details['after']}"])
+        
+        # 其他详细信息
+        for key, value in details.items():
+            if key not in ['reason', 'fix_method', 'verification', 'strategy', 'network_env', 'before', 'after']:
+                report_lines.append(f"  {key}: {value}")
+    
+    report_lines.extend(["", "=" * 80, "报告结束", "=" * 80])
+    return "\n".join(report_lines)
 
 def save_repair_report(file_path, repair_id=None, format="text"):
     """保存修复报告到文件
@@ -428,7 +367,6 @@ def save_repair_report(file_path, repair_id=None, format="text"):
 def run():
     """运行故障分析功能"""
     print_fault_analysis()
-    
     # 返回分析结果
     return {
         "success": True,

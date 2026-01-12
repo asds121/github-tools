@@ -80,6 +80,12 @@ def save_ip_quality(ip, latency, success):
 
 
 def print_step(step_num, message):
+    """打印步骤信息
+    
+    Args:
+        step_num: 当前步骤编号
+        message: 步骤描述信息
+    """
     print(f"\n{'='*50}")
     print(f"[{step_num}/6] {message}")
     print('='*50)

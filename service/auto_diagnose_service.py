@@ -188,8 +188,17 @@ def run(progress_callback=None):
     if unique_ips:
         # 使用github_ip_tester测试所有IP
         try:
-            test_results = test_ips(unique_ips)
-            update_progress(3, f"测试完成，共测试了{len(test_results)}个IP")
+            test_results_list = test_ips(unique_ips)
+            update_progress(3, f"测试完成，共测试了{len(test_results_list)}个IP")
+            
+            # 转换结果格式：列表 -> 字典
+            test_results = {}
+            for result in test_results_list:
+                ip = result['ip']
+                test_results[ip] = {
+                    'latency': result['latency'],
+                    'success': result['status'] == 'OK'
+                }
             
             # 按延迟排序，选择最佳IP
             sorted_results = sorted(test_results.items(), key=lambda x: x[1]['latency'] if x[1]['success'] else float('inf'))
@@ -234,10 +243,24 @@ def run(progress_callback=None):
     
     # 阶段5: 全面验证修复结果
     update_progress(5, "开始全面验证修复结果...")
-    time.sleep(2)  # 等待DNS缓存刷新
+    time.sleep(5)  # 增加等待时间，确保DNS缓存完全刷新
     
-    # 验证修复结果
-    verify_result = check_github()
+    # 验证修复结果，增加重试机制
+    max_retries = 3
+    verify_result = None
+    for retry in range(max_retries):
+        try:
+            verify_result = check_github()
+            if verify_result["status"] != "bad":
+                break
+            update_progress(5, f"验证失败，正在重试 ({retry + 1}/{max_retries})...")
+            time.sleep(2)
+        except Exception as e:
+            update_progress(5, f"验证异常，正在重试 ({retry + 1}/{max_retries})...")
+            time.sleep(2)
+    
+    if not verify_result:
+        verify_result = check_github()
     verify_status = verify_result["status"]
     verify_ms = verify_result.get("ms", 0)
     

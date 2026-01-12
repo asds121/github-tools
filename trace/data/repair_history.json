@@ -1,6 +1,6 @@
 ﻿[
   {
-    "timestamp": "2026-01-02T20:10:07.782473",
+    "timestamp": "2026-01-12T17:09:24.289846",
     "scheme": "auto_diagnose",
     "scheme_name": "未知修复方案",
     "success": true,
@@ -21,20 +21,20 @@
       },
       "after": {
         "status": "good",
-        "latency": 2267,
-        "best_ip": "140.82.113.4",
-        "best_latency": 0
+        "latency": 220,
+        "best_ip": "20.27.177.113",
+        "best_latency": 108
       },
       "github_ips": {
-        "github.com": "140.82.113.4",
-        "api.github.com": "140.82.113.4"
+        "github.com": "20.27.177.113",
+        "api.github.com": "20.27.177.113"
       },
       "repair_result": {
         "success": true,
         "message": "Hosts文件更新成功",
         "extended_ips": {
-          "github.com": "140.82.113.4",
-          "api.github.com": "140.82.113.4"
+          "github.com": "20.27.177.113",
+          "api.github.com": "20.27.177.113"
         },
         "entries_added": 2
       }

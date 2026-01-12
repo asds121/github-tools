@@ -2,10 +2,6 @@
 """定时巡检 - 命令行交互模块"""
 from datetime import datetime
 
-# 引入trace层模块，符合service层必须引用trace层内容的要求
-from trace import scheduled_inspection
-from trace import data_statistics
-
 
 def print_status(status):
     """打印巡检状态"""

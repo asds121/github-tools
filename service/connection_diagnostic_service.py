@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """连接诊断服务 - 复杂的GitHub连接诊断逻辑"""
 import socket
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -183,7 +182,7 @@ def diagnose_connection(progress_callback=None):
     if progress_callback:
         progress_callback("GitHub状态检查", "开始检查GitHub整体状态", 25)
     github_status = check_github()
-    print(f"\n[5/5] GitHub 状态检查")
+    print("\n[5/5] GitHub 状态检查")
     print("-" * 40)
     print(f"  当前状态: {github_status['status'].upper()}")
     print(f"  响应时间: {github_status['ms']}ms")

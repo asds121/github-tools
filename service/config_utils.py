@@ -4,9 +4,6 @@ import os
 import json
 from pathlib import Path
 
-# 引入trace层模块，符合service层必须引用trace层内容的要求
-from trace import hosts_manager
-
 
 def load_config():
     """加载配置"""
@@ -25,7 +22,7 @@ def load_config():
 
 def get_hosts_path():
     """获取hosts文件路径"""
-    return Path(os.environ.get("SystemRoot", "C:\Windows")) / "System32" / "drivers" / "etc" / "hosts"
+    return Path(os.environ.get("SystemRoot", r"C:\Windows")) / "System32" / "drivers" / "etc" / "hosts"
 
 
 def get_state_file_path():

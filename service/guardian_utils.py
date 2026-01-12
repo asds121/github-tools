@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
 """GitHub守护进程 - 工具函数模块"""
 import os
-import time
 import socket
 import threading
 import json
 from .config_utils import get_state_file_path, get_hosts_path
-
-# 引入trace层模块，符合service层必须引用trace层内容的要求
-from trace import hosts_manager
-from trace import connection_diagnostic
 
 
 # 状态锁

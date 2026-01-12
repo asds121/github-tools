@@ -2,10 +2,6 @@
 """定时巡检 - 统计分析模块"""
 from datetime import datetime, timedelta
 
-# 引入trace层模块，符合service层必须引用trace层内容的要求
-from trace import scheduled_inspection
-from trace import data_statistics
-
 
 def calculate_today_stats(history):
     """计算今日统计数据"""
